@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         launchToken = savedInstanceState?.getLong("native-companion-launch") ?: System.currentTimeMillis()
         session = ViewModelProvider(this)[WorkSessionViewModel::class.java]
-        val repository = session.repository
+        val repository = session.board
         val gateway = session.gateway
         val needed = listOf("android.car.permission.CAR_SPEED", "android.car.permission.CAR_POWERTRAIN", "pleos.car.permission.CAR_DOORS", "pleos.car.permission.NAVI_ROUTE", "pleos.car.permission.NAVI_ROUTE_SEARCH", "pleos.car.permission.NAVI_CUSTOM_MAP")
             .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
@@ -38,11 +38,12 @@ class MainActivity : ComponentActivity() {
             val work by repository.state.collectAsStateWithLifecycle()
             val vehicle by gateway.state.collectAsStateWithLifecycle()
             val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+            LaunchedEffect(lifecycle) { session.foreground = lifecycle.isAtLeast(Lifecycle.State.STARTED) }
             var presentedLaunch by rememberSaveable { mutableLongStateOf(Long.MIN_VALUE) }
             // One public handoff per launcher entry. Route/state callbacks and onResume
             // must not reopen navigation or repeatedly swap the user's two windows.
-            LaunchedEffect(launchToken, work.guidanceMode, vehicle.navigationStatus, vehicle.canWork, lifecycle) {
-                if (work.guidanceMode == GuidanceMode.NATIVE_SAMPLE && vehicle.canWork &&
+            LaunchedEffect(launchToken, work.navigationMode, vehicle.navigationStatus, vehicle.canWork, lifecycle) {
+                if (work.navigationMode == GuidanceMode.NATIVE_SAMPLE && vehicle.canWork &&
                     vehicle.navigationStatus == "연결됨" && lifecycle.isAtLeast(Lifecycle.State.STARTED) &&
                     presentedLaunch != launchToken) {
                     // Let Pleos finish the launcher transition before handing off.
@@ -53,7 +54,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             CarbonTheme {
-                VehicleCompanionApp(work, vehicle, repository, gateway)
+                OperationsApp(work, vehicle, session)
             }
         }
     }
@@ -82,11 +83,4 @@ class MainActivity : ComponentActivity() {
         super.onSaveInstanceState(outState)
     }
 
-    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
-        if (packageName.endsWith(".qa") && event.action == android.view.KeyEvent.ACTION_DOWN &&
-            event.keyCode in listOf(android.view.KeyEvent.KEYCODE_TAB, android.view.KeyEvent.KEYCODE_ENTER, android.view.KeyEvent.KEYCODE_ESCAPE)) {
-            android.util.Log.d("WorkKeyboardQA", "key=${event.keyCode} shift=${event.isShiftPressed} alt=${event.isAltPressed}")
-        }
-        return super.dispatchKeyEvent(event)
-    }
 }

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pleos Work · 단말 시험</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#161616;background:#fff;color-scheme:light}*{box-sizing:border-box}body{margin:0}header{border-bottom:1px solid #e0e0e0;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;gap:20px}h1{font-size:23px;margin:0}h2{font-size:21px;margin:0 0 16px}p{line-height:1.6;color:#525252}main{max-width:1320px;margin:0 auto;padding:32px;display:grid;grid-template-columns:320px 1fr;gap:32px}section{padding:24px;background:#f4f4f4;margin-bottom:24px}button,input,select{font:inherit;min-height:46px;padding:10px 14px;border:1px solid #8d8d8d;background:white;color:#161616}button{cursor:pointer;text-align:left}button:hover{background:#e8e8e8}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #0f62fe;outline-offset:2px}.primary{background:#0f62fe;color:white;border-color:#0f62fe}.primary:hover{background:#0043ce}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.stack{display:grid;gap:10px}.muted{font-size:13px;color:#525252}.metric{font-size:36px;line-height:1.2;font-weight:500;margin:16px 0}.notice{min-height:24px;color:#0043ce}.visit{display:block;width:100%;margin-bottom:8px}.visit[aria-pressed=true]{border:2px solid #0f62fe;background:#edf5ff}.tag{padding:5px 10px;background:#e0e0e0;font-size:13px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:14px 8px;border-bottom:1px solid #e0e0e0;font-size:14px}td button{font-size:13px;min-height:38px}summary{cursor:pointer;padding:12px 0;font-weight:600}#log{position:sticky;bottom:0;padding:12px 32px;background:#edf5ff;border-top:1px solid #a6c8ff}label{display:grid;gap:8px}@media(max-width:850px){main{grid-template-columns:1fr;padding:16px}header{padding:20px}.metric{font-size:30px}}
+</style>
+<header><h1>Pleos Work <span class="muted">단말 시험</span></h1><span class="tag">로컬 예시 데이터 · 차량 제어 없음</span></header>
+<main><aside>
+<section><h2>업무 선택</h2><label>시험 기사<select id="account"><option value="demo-parcel">김민준 · 택배</option><option value="demo-freight">박지호 · 장거리 화물</option></select></label>
+<p class="muted">차량 화면에서는 반복 완료 버튼을 누르지 않습니다. 이 단말에서 기록을 보내면 차량 앱이 갱신됩니다.</p>
+<label class="row"><input id="cold" type="checkbox"> 냉장·냉동 옵션</label></section>
+<section><h2>차량 연결 승인</h2><p class="muted">차량 앱의 설정 → 단말 연결에서 코드를 요청하세요. 차량에 표시된 코드와 일치하는지 확인합니다.</p>
+<label>차량 연결 코드<input id="code" autocomplete="off" maxlength="8" placeholder="예: A1B2C3D4"></label>
+<div class="row" style="margin-top:12px"><button class="primary" id="approve">이 기사로 승인</button><button id="deny">거절</button></div><p id="grants" class="muted"></p></section>
+<section><h2>확인할 순서</h2><div class="stack muted" id="instructions"></div></section>
+</aside><div>
+<section><div class="row" style="justify-content:space-between"><h2 id="title">업무 수신 중</h2><span id="round" class="tag"></span></div>
+<div class="metric" id="count"></div><p id="status"></p>
+<div class="row" id="actions"></div></section>
+<section><h2>현재 작업 전환</h2><p class="muted">기존 회사 앱에서 배정·전환된 작업을 전달하는 시험입니다. 전환해도 다른 구역의 미완료 기록은 남습니다.</p><div id="visits"></div></section>
+<section id="facility"><h2>화물 현장 기록</h2><div class="row"><button data-facility="REGISTERED">접수 기록 전송</button><button data-facility="CALLED">03번 도크 호출</button><button data-facility="WORKING">작업 시작 기록</button><button id="receipt">서명·인수 완료 전송</button></div>
+<p class="muted">도착, 접수, 도크 호출, 하역, 인수는 각각 별도의 기록입니다.</p></section>
+<section id="sensor"><h2>화물칸 센서</h2><div class="row"><button data-sensor="normal">−19°C 수신</button><button data-sensor="deviation">−15°C 이탈</button><button data-sensor="door">문 열림 + 이탈</button><button data-sensor="setpoint">설정 온도 불일치</button><button data-sensor="pause">수신 멈추기</button><button data-sensor="offline">연결 끊김 전송</button></div>
+<p class="muted">정상·이탈 선택 시 5초마다 예시 측정값을 보냅니다. 수신을 멈춘 뒤 15초가 지나면 차량 앱에 현재 확인 불가가 표시됩니다.</p></section>
+<section><h2>운전·업무 종료</h2><div class="row"><button id="driveEnd">오늘 운전 종료 기록</button><button id="driveResume">운전 재개 기록</button><button id="dayEnd">업무 시스템 종료 기록</button><button id="dayResume">업무 재개 기록</button><button id="sync">전송 대기 결과 서버 반영</button></div><p class="muted">운전 종료와 업무 종료를 구분합니다. 어느 기록도 미완료 물품을 삭제하지 않습니다.</p></section>
+<section><details><summary>물품별 결과 · 이전 방문지의 늦은 결과</summary><p class="muted">식별번호는 작업 전환·회차 변경 후에도 유지됩니다. 아래에서 이전 구역의 결과도 보낼 수 있습니다.</p><div class="row"><label>구역<select id="taskVisit"></select></label></div><table><thead><tr><th>번호</th><th>건물·출입구</th><th>처리</th><th>전송</th></tr></thead><tbody id="tasks"></tbody></table></details></section>
+<button id="reset">새 예시 업무 시작</button><p class="muted">현재 시험 서버의 해당 기사 데이터를 새 예시로 바꿉니다. 차량 앱은 이전 수신 기록을 별도 보존합니다.</p>
+</div></main><div id="log" role="status" aria-live="polite">서버 연결 중</div>
+<script>
+const csrf='__CSRF__';let states=[],busy=false,lastSignature='';
+const $=id=>document.getElementById(id), account=()=>$('account').value, current=()=>states.find(x=>x.accountId===account());
+const names={DELIVERY:'배송',RETURN:'회수',COLLECTION:'집하',HANDOFF:'인계',LOAD:'상차',UNLOAD:'하역',RECEIPT:'인수',CONTAINER:'용기'};
+function node(tag,text,cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el}
+async function post(path,payload){const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(payload)});const value=await res.json();if(!res.ok)throw Error(value.error||'전송 실패');return value}
+async function act(payload){if(busy)return;busy=true;try{await post('/control/action',{account:account(),...payload});$('log').textContent='기록을 전송했습니다. 차량 앱에 약 2초 안에 반영됩니다.';await refresh()}catch(e){$('log').textContent=e.message}finally{busy=false}}
+function button(label,payload,primary=false){const b=node('button',label,primary?'primary':'');b.dataset.focusKey=JSON.stringify(payload);b.onclick=()=>act(payload);return b}
+async function refresh(){try{const res=await fetch('/control/state');const data=await res.json();if(!res.ok)throw Error(data.error);states=data.states;const sig=JSON.stringify(states);if(sig!==lastSignature){render();lastSignature=sig}const codes=data.grants.map(x=>x.code);$('grants').textContent=codes.length?'승인 대기: '+codes.join(', '):'승인 대기 코드 없음';if(!$('code').value&&codes.length===1)$('code').value=codes[0]}catch(e){$('log').textContent='연결 확인: '+e.message}}
+function render(){const focused=document.activeElement,focusId=focused?.id,focusKey=focused?.dataset?.focusKey;const s=current();if(!s)return;const v=s.visits.find(x=>x.id===s.currentVisitId),ts=s.tasks.filter(x=>x.visitId===v.id);$('title').textContent=v.name;$('round').textContent=v.round+'회차 · '+v.operation;
+const kinds=[...new Set(ts.map(x=>x.kind))];$('count').textContent=kinds.map(k=>`${names[k]} ${ts.filter(x=>x.kind===k).reduce((n,t)=>n+t.quantity-t.completed,0)} 남음`).join(' · ');
+$('status').textContent=(s.drivingEnded?'오늘 운전 종료 · ':'')+(s.dayClosed?'업무 종료 수신 · ':'')+'전송 대기 '+s.tasks.filter(t=>['LOCAL','PENDING'].includes(t.sync)).length+'건';$('cold').checked=s.refrigerated;
+$('actions').replaceChildren();if(v.operation==='배송'){$('actions').append(button('8개 배송 결과 보내기',{action:'partial8'},true),button('이 구역 배송 처리',{action:'deliver'}),button('회수 처리',{action:'return'}),button('단말 처리 · 전송 대기',{action:'pending'}))}else $('actions').append(button(v.operation+' 수량 처리',{action:'complete'},true));
+$('visits').replaceChildren();s.visits.forEach(x=>{const b=button(`${x.round}회차 · ${x.name} · ${x.operation}`,{action:'current',visit:x.id});b.className='visit';b.setAttribute('aria-pressed',String(x.id===v.id));$('visits').append(b)});
+$('facility').hidden=s.mode!=='FREIGHT';$('sensor').hidden=!s.refrigerated;
+const selected=$('taskVisit').value||v.id;$('taskVisit').replaceChildren();s.visits.forEach(x=>{const o=node('option',`${x.round}회차 · ${x.name}`);o.value=x.id;$('taskVisit').append(o)});$('taskVisit').value=selected;renderTasks();
+const steps=s.mode==='PARCEL'?['1. 차량 설정에서 단말 연결 후 승인','2. 8개 배송 → 차량에 남은 4개 확인','3. 거래처 집하 → 수량 처리','4. 터미널 인계 → 수량 처리','5. 한빛아파트 복귀 → 잔량 유지 확인','6. 남은 배송·회수 → 2회차 → 캠프 인계','7. 업무 종료 기록 전송']:['1. 접수 → 도크 호출 → 상차 결과','2. 미래물류센터로 현재 작업 전환','3. 하역 결과 → 인수 미완료 확인','4. 서명·인수 결과 전송','5. 용기 회수 → 센터 인계','6. 운전 종료 후 남은 기록 확인'];$('instructions').replaceChildren(...steps.map(x=>node('div',x)));const restored=focusId?$(focusId):focusKey?[...document.querySelectorAll('[data-focus-key]')].find(x=>x.dataset.focusKey===focusKey):null;if(restored&&document.activeElement!==restored)restored.focus({preventScroll:true})}
+function renderTasks(){const s=current();if(!s)return;$('tasks').replaceChildren();s.tasks.filter(t=>t.visitId===$('taskVisit').value).forEach(t=>{const tr=node('tr');tr.append(node('td',t.number+' · '+names[t.kind]),node('td',[t.building,t.entrance].filter(Boolean).join(' ')),node('td',`${t.completed}/${t.quantity} · ${t.sync}`));const td=node('td');td.append(button('결과 전송',{action:'task',id:t.id,completed:t.quantity,sync:'CONFIRMED'}));tr.append(td);$('tasks').append(tr)})}
+$('taskVisit').onchange=renderTasks;$('account').onchange=()=>{lastSignature='';$('taskVisit').value='';render()};$('cold').onchange=()=>act({action:'cold',enabled:$('cold').checked});
+async function approve(deny){try{await post('/control/approve',{account:account(),code:$('code').value,deny});$('log').textContent=deny?'연결을 거절했습니다.':'같은 차량 코드로 연결을 승인했습니다.';await refresh()}catch(e){$('log').textContent=e.message}}
+$('approve').onclick=()=>approve(false);$('deny').onclick=()=>approve(true);
+document.querySelectorAll('[data-facility]').forEach(b=>b.onclick=()=>act({action:'facility',phase:b.dataset.facility,dock:b.dataset.facility==='CALLED'?'03번 도크':null}));document.querySelectorAll('[data-sensor]').forEach(b=>b.onclick=()=>act({action:'sensor',mode:b.dataset.sensor}));
+$('receipt').onclick=()=>act({action:'receipt'});$('sync').onclick=()=>act({action:'sync'});$('driveEnd').onclick=()=>act({action:'driving',closed:true});$('driveResume').onclick=()=>act({action:'driving',closed:false});$('dayEnd').onclick=()=>act({action:'day',closed:true});$('dayResume').onclick=()=>act({action:'day',closed:false});$('reset').onclick=()=>{if(confirm('이 기사의 시험 데이터를 새 예시로 시작할까요?'))act({action:'reset'})};
+$('code').value=new URLSearchParams(location.search).get('code')||'';refresh().then(()=>$('log').textContent='시험 서버 연결됨');setInterval(refresh,2000);
+</script></html>

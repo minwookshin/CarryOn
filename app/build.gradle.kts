@@ -11,10 +11,12 @@ android {
         applicationId = "com.minwook.pleoswork"
         minSdk = 28
         targetSdk = 34
-        versionCode = 26
-        versionName = "1.25-demo"
+        versionCode = 27
+        versionName = "2.0-workflow"
+        testInstrumentationRunner = "com.minwook.pleoswork.WorkAccessibilityProbe"
+        buildConfigField("String", "WORK_API_URL", "\"${providers.gradleProperty("workApiUrl").orElse("").get()}\"")
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     buildTypes {
         getByName("debug") {
             // Optional isolated UI verification, preserving the driver's installed demo session.

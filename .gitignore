@@ -13,3 +13,6 @@ local.properties
 *.mp4
 *.zip
 captures/
+
+__pycache__/
+*.sqlite3*

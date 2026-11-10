@@ -61,7 +61,7 @@ class PleosGateway(private val context: Context) {
             if (!active) return
             val valid = value.status == CarPropertyValue.STATUS_AVAILABLE
             when (value.propertyId) {
-                VehiclePropertyIds.PERF_VEHICLE_SPEED -> mutable.update { it.copy(speedKph = if (valid) (value.value as? Float)?.times(3.6f) else null) }
+                VehiclePropertyIds.PERF_VEHICLE_SPEED -> mutable.update { it.copy(speedKph = if (valid) (value.value as? Float)?.times(3.6f) else null, speedObservedAt = System.currentTimeMillis()) }
                 VehiclePropertyIds.GEAR_SELECTION -> mutable.update { it.copy(gear = if (valid) value.value as? Int else null) }
                 VehiclePropertyIds.PARKING_BRAKE_ON -> {
                     mutable.update { it.copy(parkingBrake = if (valid) value.value as? Boolean else null) }
@@ -72,7 +72,7 @@ class PleosGateway(private val context: Context) {
         override fun onErrorEvent(propId: Int, areaId: Int) {
             if (!active) return
             when (propId) {
-                VehiclePropertyIds.PERF_VEHICLE_SPEED -> mutable.update { it.copy(speedKph = null) }
+                VehiclePropertyIds.PERF_VEHICLE_SPEED -> mutable.update { it.copy(speedKph = null, speedObservedAt = System.currentTimeMillis()) }
                 VehiclePropertyIds.GEAR_SELECTION -> mutable.update { it.copy(gear = null) }
                 VehiclePropertyIds.PARKING_BRAKE_ON -> mutable.update { it.copy(parkingBrake = null) }
             }
@@ -154,7 +154,7 @@ class PleosGateway(private val context: Context) {
                     for (id in listOf(VehiclePropertyIds.PERF_VEHICLE_SPEED, VehiclePropertyIds.GEAR_SELECTION, VehiclePropertyIds.PARKING_BRAKE_ON)) {
                         runCatching {
                             check(properties!!.getCarPropertyConfig(id) != null) { "Property unavailable: $id" }
-                            check(properties!!.registerCallback(propertyListener, id, CarPropertyManager.SENSOR_RATE_ONCHANGE)) { "Subscription unavailable: $id" }
+                            check(properties!!.registerCallback(propertyListener, id, if (id == VehiclePropertyIds.PERF_VEHICLE_SPEED) CarPropertyManager.SENSOR_RATE_NORMAL else CarPropertyManager.SENSOR_RATE_ONCHANGE)) { "Subscription unavailable: $id" }
                         }.onFailure { error("차량 상태", it) }
                     }
                 }.onFailure { error("AAOS", it) }
@@ -222,7 +222,7 @@ class PleosGateway(private val context: Context) {
         val v=vehicle ?: return
         fun current()=active && generation==session
         fun validPercent(value: Int?)=value?.takeIf { it in 0..100 }
-        runCatching {
+        if(context.checkSelfPermission("pleos.car.permission.CAR_ENERGY") == PackageManager.PERMISSION_GRANTED) runCatching {
             v.getFuel().checkFuelPercentCapabilities(onComplete={ config ->
                 if(current()) {
                     if(config.accessType in setOf(AccessType.READ,AccessType.READ_WRITE)) v.getFuel().getFuelPercent(onComplete={ value ->

@@ -152,6 +152,7 @@ data class VehicleState(
     val batteryUpdatedAt: Long = 0,
     val rangeUpdatedAt: Long = 0,
     val errors: List<String> = emptyList(),
+    val speedObservedAt: Long = 0,
 ) {
     // Unknown states and all non-P gears fail closed, including D at 0 km/h.
     val canWork: Boolean get() = automotive && uxRestricted == false && gear == 4 && speedKph != null && kotlin.math.abs(speedKph) < 0.5f

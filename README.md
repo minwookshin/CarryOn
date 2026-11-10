@@ -1,45 +1,61 @@
-# Pleos Work
+# Pleos Work · 2.0
 
-택배·화물 운전자가 차량에서 목적지와 물량을 확인하고, 단말 처리 결과를 받은 뒤 다음 방문지로 이어가는 Kotlin / Jetpack Compose 앱입니다. 왼쪽 지도와 오른쪽 Carbon 작업 화면을 함께 사용합니다.
+택배·장거리 화물 기사에게 **기존 업무 시스템의 현재 작업과 미완료 기록**을 보여주는 Kotlin/Compose 차량 앱입니다. Carbon 색상·IBM Plex Sans KR·둥근 아이콘을 유지합니다. 공유된 `driver-app-flow.md`와 요약본을 기준으로 흐름을 재구성했습니다.
 
-![배송·회수 방문지 도착 화면](docs/images/workflow.jpg)
+차량 화면에서 스캔·완료·재탑승 확인을 반복하지 않습니다. 별도 단말의 결과가 들어오면 수량과 출입구별 상태가 갱신되고, 업무 시스템이 현재 방문지를 바꿀 때 목적지를 연결합니다. 도착은 업무 완료가 아닙니다.
 
-## 먼저 보기
-
-[전체 흐름 영상](https://github.com/minwookshin/pleos-work/releases/download/v1.25-demo/Pleos-Delivery-Pickup-Full-Workflow.mp4) · [APK 다운로드](https://github.com/minwookshin/pleos-work/releases/download/v1.25-demo/Pleos-Work-1.25.apk) · [릴리스와 모든 파일](https://github.com/minwookshin/pleos-work/releases/tag/v1.25-demo)
-
-릴리스의 `Pleos-Delivery-Pickup-Full-Workflow.mp4`를 내려받으면 설치 없이 약 2분 56초의 전체 흐름을 볼 수 있습니다. **QR 연결 → 이동·자동 도착 → 단말 결과 → 재탑승·미처리 보완 → 다음 방문지 → 센터 복귀·인계** 순서입니다.
+2.0은 이 저장소의 최신 소스입니다. 기존 `v1.25-demo` 릴리스와 영상은 이전 버전입니다. 2.0 APK는 아래 빌드 절차로 만들 수 있습니다.
 
 ## 직접 실행
 
-1. [설치 안내](docs/INSTALL.md)에 따라 Pleos Connect 에뮬레이터를 준비합니다.
-2. 릴리스의 `Pleos-Work-1.25.apk`를 설치하고 `배송` 앱을 엽니다.
-3. [테스트 순서](docs/TEST.md)를 따라 배송·회수와 화물을 확인합니다.
+1. Pleos 에뮬레이터에서 APK를 설치하고 앱을 엽니다.
+2. Mac에서 `./scripts/run-local-integration.sh`를 실행합니다. `ANDROID_HOME` 또는 `ANDROID_SDK_ROOT`에 SDK 경로를 설정하세요.
+3. [단말 시험 화면](http://127.0.0.1:8797/control)을 엽니다.
+4. 차량 앱의 **설정 → 단말 연결**에서 표시된 코드를 확인하고, Mac 단말에서 같은 코드를 승인합니다.
+5. 단말에서 결과나 현재 작업을 전송하면 차량 앱이 약 2초 간격으로 수신합니다.
 
-브라우저에서 APK를 바로 실행하는 구조가 아닙니다. 현재 확인한 환경은 **Mac Apple Silicon · Pleos Connect 2.1.0 ARM64 · Android Automotive API 34**입니다.
+[택배·화물 시험 순서](integration/README.md) · [API·인증·센서 계약](integration/CONTRACT.md) · [변경과 검증](WORKFLOW-2.md)
 
-## 동작 범위
+## 화면과 흐름
 
-- 기사별 예시 배차와 큰 상자·보통 상자·회수 수량, 적재 위치
-- 이동 중 진입 정보, 도착 후 정차·하차 정보
-- 배송·회수 단말 결과, 재탑승 확인, 미처리 보완·사유 인계
-- 화물 도크 배정, 상차·출발 준비, 하차·인수, 회수·센터 인계
-- 화면을 전환해도 유지되는 왼쪽 지도, 큰 글자, 설명이 있는 아이콘과 키보드 포커스
+- 최초 택배/장거리 화물 및 냉장·냉동 옵션을 선택하고 이후 진행 중 업무를 복원합니다. 이전 1.25 기록은 보존·이전하며 24시간 경과로 폐기하지 않습니다.
+- 택배는 회차 → 작업 구역 → 건물 → 출입구 → 고유 물품 ID를 유지합니다. 부분 배송, 중간 집하·터미널 인계·배송 재개, 같은 주소의 다음 회차, 이전 구역의 늦은 결과를 처리합니다.
+- 화물은 위치상 도착, 접수, 도크 호출, 상하차, 인수를 각각 다룹니다. 하역 완료가 서명을 만들거나 오늘 운전 종료가 미완료 운송을 지우지 않습니다.
+- 기본은 **Pleos 기본 내비와 앱 한 칸**입니다. 두 앱의 실제 창 배치는 Pleos OS가 관리합니다. 정차 중 상세 화면은 사용자가 선택하며 자동 확대하지 않습니다. 주행 중에는 창 크기를 유지하고 상세 조작을 제한합니다.
+- 설정에서 **앱 지도 · 이동 시험**을 선택하면 넓은 앱 안에서 왼쪽 예시 지도·오른쪽 Carbon 화면을 볼 수 있습니다. 약 18초의 예시 이동과 도착은 실제 GPS나 업무 완료로 저장하지 않습니다.
+- 운송 현황은 확인된 차량 값, 수신된 주행·정차 구간, 남은 작업·전송 상태를 보여줍니다. 정차를 휴식으로 추정하거나 점수를 만들지 않습니다.
+- 냉장·냉동은 두 업무 유형 모두의 선택 옵션입니다. 요구·설정·측정 온도, 문 상태, 수신 시각과 최근 720건을 분리합니다. 오래된 값은 현재 확인 불가로 표시하고 문 열림으로 온도 이탈을 정상 처리하지 않습니다.
 
-기본 모드의 경로 이동·자동 도착, QR·기사 인증·단말 결과는 로컬 체험 시나리오입니다. 실제 휴대폰 앱이나 TMS 서버와 연결하지 않았습니다. Pleos Vehicle / NaviHelper 연동 코드는 포함하지만, 공개 에뮬레이터의 실제 지도 배경·GPS 주행·도착까지 성공한 제품으로 소개하지 않습니다.
+## 실제 연동 범위
 
-## 빌드
+| 연결 | 구현 및 현재 확인 범위 |
+|---|---|
+| Pleos/AAOS 차량 | 기어·속도·운전 제한·주차 브레이크, 운전석 문, 지원되는 에너지 값. 지원·권한·값의 유효성을 확인하고 없으면 미수신 표시 |
+| NaviHelper 3.0.5 | 목적지 요청, 응답·시간·거리, 내비 화면 요청, 목적지와 일치하는 도착 이벤트 처리. 공식 에뮬레이터의 지도 배경/GPS 이동·도착 문제는 해결된 것으로 주장하지 않음 |
+| 회사 업무 API | HTTP 클라이언트, 스냅샷·커서 이벤트, 계정/작업 흐름/개별 개정 번호, 재시도·복원 구현. 현재는 함께 제공한 **Mac 시험 서버**에 연결 |
+| 인증 | 차량 Device Authorization → 코드 승인 → 액세스/갱신 토큰, 토큰 회전·취소. Android Keystore로 자격 증명 암호화. 실제 운송회사 SSO는 미연결 |
+| 냉동 센서 | 공통 수신 형식·유효시간·이력·미수신 처리 구현. 현재 측정값은 시험 서버가 공급하며 실제 냉동기·센서 제조사 연동은 미연결 |
 
-Android Studio에서 이 폴더를 열고 Android SDK 35와 JDK 17 이상을 준비합니다. SDK 경로는 자신의 환경에서 설정하며 `local.properties`는 공유하지 않습니다.
+시험 서버의 QR 주소는 Mac의 루프백 주소입니다. **휴대폰 카메라로 스캔해 원격 접속하는 배포 서버가 아닙니다.** 이 Mac에서는 단말 시험 화면에서 같은 코드를 승인합니다. 실제 서비스는 HTTPS 검증 페이지와 회사 로그인/승인 서버를 제공해야 합니다. 차량 앱에 회사 비밀번호나 앱 비밀키를 넣지 않습니다.
+
+예시 방문지는 가상 데이터이며 기본 내비에는 공식 SDK의 42dot/소프트웨어드림센터 시험 좌표가 연결되어 있습니다. 임의로 만든 배송 주소를 실제 시설 좌표로 취급하지 않습니다.
+
+## 개발
+
+versionCode **27**, versionName **2.0-workflow**. Kotlin 2.1.20 / Compose / AGP 8.9.2 / Gradle 8.11.1. 이 Mac은 Android Studio의 JBR 21로 빌드했습니다.
 
 ```sh
-./gradlew :app:testDebugUnitTest :app:assembleDebug
+./gradlew testDebugUnitTest assembleDebug lintDebug
+cd integration
+python3 -m unittest -v test_server.py
 ```
 
-Kotlin 2.1.20 · AGP 8.9.2 · Gradle 8.11.1 · compileSdk 35 · targetSdk 34. Pleos Vehicle 2.3.2와 NaviHelper 3.0.5는 `settings.gradle.kts`의 공식 Maven 저장소에서 가져옵니다. SDK 접근 조건은 [Pleos 개발자 가이드](https://document.pleos.ai/docs/connect/guide/getting-started/application-development/setup-connect-sdk-emulator)를 확인하세요.
+외부 회사 어댑터는 `./gradlew -PworkApiUrl=https://your-adapter.example assembleRelease`처럼 빌드 주소를 지정합니다. Release는 HTTPS만 허용하며 서명 키·배포 계정은 포함하지 않습니다. 실제 운영 IdP, 회사 데이터 권한, 센서 공급자 매핑 및 실차 검증을 갖춘 뒤 연결해야 합니다.
 
-## 확인한 내용
+`MainActivity → WorkSessionViewModel → OperationsRepository / OperationsReducer`가 화면·인증·업무 기록을 분리합니다. `PleosGateway`가 실제 SDK를 담당합니다. 활동이 살아 있는 동안 동기화하며, 앱 프로세스 종료·차량 시동 종료 후 백그라운드 수신 서비스는 구현하지 않았습니다. 재실행 시 저장 커서에서 이어 받습니다.
 
-1.25에서 단위 검사 131개가 통과했습니다. 2026-11-02에는 김민준 배차의 세 방문지와 배송·회수·재탑승·센터 인계 전체를 직접 확인했습니다. [검증 범위와 영상 설명](docs/TEST.md)을 참고하세요.
+[이전 1.25 설명과 영상 범위](README-1.25.md)는 이전 버전의 동작입니다. 2.0의 반복 완료·재탑승 버튼 제거 전 영상과 혼동하지 마세요.
 
-Carbon 색상과 IBM Plex Sans KR을 Compose에 적용한 프로젝트입니다. 공식 Carbon Android 라이브러리 또는 접근성 인증 제품은 아닙니다. 구성 요소별 출처와 라이선스는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있습니다.
+## 라이선스
+
+Carbon/ZXing Apache-2.0, IBM Plex OFL-1.1, Lucide ISC/MIT, OpenStreetMap ODbL. 관련 라이선스 파일 및 지도 출처를 유지합니다. 공식 Carbon Android 라이브러리나 접근성 인증을 뜻하지 않습니다.
