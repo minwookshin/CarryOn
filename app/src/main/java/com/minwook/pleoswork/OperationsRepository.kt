@@ -10,6 +10,8 @@ data class BoardState(
     val connecting: Boolean = false, val grant: DeviceGrant? = null, val connectionMessage: String = "",
     val segments: List<DrivingSegment> = emptyList(), val lastSpeedAt: Long = 0,
     val lastMoving: Boolean? = null, val expanded: Boolean = false, val largeText: Boolean = false,
+    val preferredMode: ServiceMode = ServiceMode.PARCEL, val preferredCold: Boolean = false,
+    val assignmentChangedAt: Long = 0,
 )
 
 class OperationsRepository(private val context: Context) {
@@ -25,6 +27,8 @@ class OperationsRepository(private val context: Context) {
         ledger = restoredLedger, route = restoredRoute,
         navigationMode = GuidanceMode.entries.firstOrNull { it.name == prefs.getString("navigationMode", "NATIVE_SAMPLE") } ?: GuidanceMode.NATIVE_SAMPLE,
         expanded = prefs.getBoolean("expanded", false), largeText = prefs.getBoolean("largeText", false),
+        preferredMode = ServiceMode.entries.firstOrNull { it.name == prefs.getString("preferredMode", null) } ?: restoredLedger?.mode ?: ServiceMode.PARCEL,
+        preferredCold = prefs.getBoolean("preferredCold", restoredLedger?.refrigerated ?: false),
         segments = runCatching { OperationsCodec.gson.fromJson(prefs.getString("segments", "[]"), Array<DrivingSegment>::class.java).toList() }.getOrDefault(emptyList()),
     ))
     val state = mutable.asStateFlow()
@@ -40,7 +44,13 @@ class OperationsRepository(private val context: Context) {
         prefs.edit().putString("ledger", OperationsCodec.encode(next))
             .putString("route", route?.let { OperationsCodec.gson.toJson(it) })
             .putString("routeStream", next.streamId).apply()
-        mutable.value = old.copy(ledger = next, route = route)
+        val receivedProfile = !next.streamId.startsWith("local-") && (old.ledger?.accountId != next.accountId ||
+            old.ledger.mode != next.mode || old.ledger.refrigerated != next.refrigerated)
+        if (receivedProfile) prefs.edit().putString("preferredMode",next.mode.name).putBoolean("preferredCold",next.refrigerated).apply()
+        mutable.value = old.copy(ledger = next, route = route,
+            preferredMode = if(receivedProfile) next.mode else old.preferredMode,
+            preferredCold = if(receivedProfile) next.refrigerated else old.preferredCold,
+            assignmentChangedAt = if (changed && next.current != null) now else old.assignmentChangedAt)
     }
     @Synchronized fun update(change: (BoardState) -> BoardState) {
         val old = mutable.value
@@ -49,7 +59,16 @@ class OperationsRepository(private val context: Context) {
             .putString("routeStream", next.ledger?.streamId).apply()
         mutable.value = next
     }
-    fun selectMode(mode: ServiceMode, cold: Boolean) {
+    @Synchronized fun selectMode(mode: ServiceMode, cold: Boolean) {
+        val next = applyWorkPreferences(state.value, mode, cold)
+        prefs.edit().putString("preferredMode", mode.name).putBoolean("preferredCold", cold)
+            .putString("ledger", next.ledger?.let(OperationsCodec::encode)).apply()
+        mutable.value = next
+    }
+    /** Explicit example selection is separate from preferences and company authentication. */
+    fun loadExample() {
+        val mode = state.value.preferredMode
+        val cold = state.value.preferredCold
         val old = state.value.ledger
         if (old != null) archive(old)
         val key = "chosen:${mode.name}:$cold"
@@ -58,7 +77,8 @@ class OperationsRepository(private val context: Context) {
         val fixture = OperationsCodec.decode(raw) ?: error("Invalid bundled workflow")
         val next = existing ?: fixture.copy(refrigerated = cold, streamId = "local-${mode.name.lowercase()}-$cold",
             visits = fixture.visits.map { it.copy(requiredLow = if (cold) -20f else null, requiredHigh = if (cold) -18f else null) })
-        update { it.copy(connected = false, connectionMessage = "", grant = null, connecting = false) }
+        prefs.edit().putString("navigationMode", GuidanceMode.DEMO.name).apply()
+        update { it.copy(connected = false, connectionMessage = "예시 업무", grant = null, connecting = false, navigationMode = GuidanceMode.DEMO) }
         ledger(next)
         prefs.edit().putString(key, OperationsCodec.encode(next)).apply()
     }
@@ -68,7 +88,7 @@ class OperationsRepository(private val context: Context) {
     fun navigationMode(mode: GuidanceMode) {
         if (mode == state.value.navigationMode) return
         prefs.edit().putString("navigationMode", mode.name).apply()
-        update { it.copy(navigationMode = mode, route = it.ledger?.current?.let { v -> BoardNavigation.start(v, mode, System.currentTimeMillis()) }) }
+        update { it.copy(navigationMode = mode, route = it.ledger?.takeUnless { l -> l.dayClosed || l.drivingEnded }?.current?.let { v -> BoardNavigation.start(v, mode, System.currentTimeMillis()) }) }
     }
     fun navigate() { update { s -> s.copy(route = s.ledger?.current?.let { BoardNavigation.start(it, s.navigationMode, System.currentTimeMillis()) }) } }
     fun expand() { update { it.copy(expanded = !it.expanded) }; prefs.edit().putBoolean("expanded", state.value.expanded).apply() }

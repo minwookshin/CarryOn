@@ -57,6 +57,7 @@ OAuth 요청 본문은 `application/x-www-form-urlencoded`, 업무 응답은 JSO
 | `visit.id`, `round` | 작업 구역/방문과 회차. 같은 주소 재방문을 주소 문자열로 합치지 않음 |
 | `task.id`, `number` | 시스템 고유 작업 ID와 운전자에게 보이는 원래 물품 번호. 재번호 부여하지 않음 |
 | `building`, `entrance` | 공급자가 확인한 건물·출입구. 주소로 연결 통로나 선반을 추정하지 않음 |
+| `visit.timeWindow`, `cargoInstructions`, `receiptInstructions`, `plannedStop` | 선택적 시간·화물·인수·예정 정차 조건(각 300자 이내). 공급된 정보만 표시하며 없으면 임의 생성하지 않음 |
 | `location` | 실제로 공급된 차량 내부 적재 위치만. 누락 시 숨김 |
 | `quantity`, `completed` | 전체/처리 수량. `0 ≤ completed ≤ quantity` |
 | `sync` | `OPEN`, `LOCAL`, `PENDING`, `CONFIRMED`. 공급자가 알려 준 단계만 사용 |
@@ -127,3 +128,9 @@ OAuth 요청 본문은 `application/x-www-form-urlencoded`, 업무 응답은 JSO
 - [RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628): Device Authorization와 폴링 오류/승인.
 - [RFC 8252](https://datatracker.ietf.org/doc/html/rfc8252): 네이티브 앱 외부 브라우저·PKCE.
 - [Android Keystore](https://developer.android.com/privacy-and-security/keystore), [Android 암호화](https://developer.android.com/privacy-and-security/cryptography): 키 보관·AES/GCM.
+
+## 2.1 설정과 표시의 경계
+
+최초 업무·차량 기본 설정은 배정을 생성하지 않는다. 설정 저장은 기존 인증·업무 기록·내비 경로를 유지하며, 새로운 회사 프로필은 수신한 배정을 따른다. 회사 데이터의 요구 온도를 로컬 차량 옵션으로 덮어쓰지 않는다. 예시 업무 전환은 별도 조작이며 이전 회사 기록을 보존한다.
+
+처리 결과 전송 대기, 하역 후 인수 미완료, 현재 방문지 처리 완료/다음 배정 대기, 오늘 운전 종료, 업무 종료를 구분한다. 화면 정렬·펼쳐 보기·포커스 복원은 원래 작업 ID와 회사 상태를 변경하지 않는다.

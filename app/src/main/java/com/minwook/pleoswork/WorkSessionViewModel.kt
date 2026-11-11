@@ -1,6 +1,9 @@
 package com.minwook.pleoswork
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
@@ -20,6 +23,7 @@ class WorkSessionViewModel(application: Application) : AndroidViewModel(applicat
     private var connectionJob: Job? = null
     private var connectionGeneration = 0
     var foreground = false
+    var workVisible by mutableStateOf(false)
 
     init {
         gateway.start()
@@ -31,14 +35,14 @@ class WorkSessionViewModel(application: Application) : AndroidViewModel(applicat
                 val elapsed = SystemClock.elapsedRealtime()
                 val car = gateway.state.value
                 val route = board.state.value.route
-                if (route?.mode == GuidanceMode.NATIVE_SAMPLE && route.status == GuidanceStatus.REQUESTED &&
+                if (workVisible && board.state.value.canPresentNative && route?.mode == GuidanceMode.NATIVE_SAMPLE && route.status == GuidanceStatus.REQUESTED &&
                     route.issuedAt == 0L && route.target != null && car.canWork && car.navigationStatus == "연결됨") {
                     val accepted = gateway.requestDestination(route.target)
-                    board.update { s -> if (s.route != route) s else s.copy(route = route.copy(issuedAt = System.currentTimeMillis(),
+                    board.update { s -> if (s.route != route) s else s.copy(route = route.copy(startedAt = System.currentTimeMillis(), issuedAt = System.currentTimeMillis(),
                         status = if (accepted) GuidanceStatus.REQUESTED else GuidanceStatus.FAILED,
                         message = if (accepted) "목적지 전달됨" else "목적지를 전달하지 못했습니다")) }
                 }
-                board.tick(car, System.currentTimeMillis(), elapsed - last, foreground)
+                board.tick(car, System.currentTimeMillis(), elapsed - last, foreground && workVisible)
                 last = elapsed
             }
         }
@@ -47,7 +51,11 @@ class WorkSessionViewModel(application: Application) : AndroidViewModel(applicat
 
     fun selectMode(mode: ServiceMode, refrigerated: Boolean) {
         if (!gateway.state.value.canWork) return
-        disconnect(); board.selectMode(mode, refrigerated)
+        board.selectMode(mode, refrigerated)
+    }
+    fun loadExample() {
+        if (!gateway.state.value.canWork) return
+        disconnect(); board.loadExample()
     }
     fun beginConnection() {
         if (!gateway.state.value.canWork || board.state.value.connecting) return

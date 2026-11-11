@@ -51,6 +51,16 @@ class WorkAccessibilityProbe : Instrumentation() {
             for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) automation.injectInputEvent(
                 KeyEvent(at, at, action, code, 0, meta, -1, 0, 0, InputDevice.SOURCE_KEYBOARD), true)
         }
+        fun talkBackKey(code: Int) {
+            val device = InputDevice.getDeviceIds().firstOrNull { InputDevice.getDevice(it)?.keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC } ?: -1
+            val at = SystemClock.uptimeMillis()
+            val meta = KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON
+            fun send(action: Int, key: Int, flags: Int) = automation.injectInputEvent(
+                KeyEvent(at,SystemClock.uptimeMillis(),action,key,0,flags,device,0,0,InputDevice.SOURCE_KEYBOARD),true)
+            send(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_ALT_LEFT,meta)
+            send(KeyEvent.ACTION_DOWN,code,meta); send(KeyEvent.ACTION_UP,code,meta)
+            send(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_ALT_LEFT,0)
+        }
         try {
             startActivitySync(targetContext.packageManager.getLaunchIntentForPackage(targetContext.packageName))
             SystemClock.sleep(1200)
@@ -74,7 +84,21 @@ class WorkAccessibilityProbe : Instrumentation() {
             val mode = args.getString("mode", "observe")
             val steps = args.getString("steps", "10").toInt().coerceIn(1, 80)
             when (mode) {
+                "sequence" -> args.getString("sequence", "TAB").split(',').take(100).forEach { command ->
+                    when(command.trim()) {
+                        "TAB" -> key(KeyEvent.KEYCODE_TAB)
+                        "SHIFT_TAB" -> key(KeyEvent.KEYCODE_TAB,true)
+                        "ENTER" -> key(KeyEvent.KEYCODE_ENTER)
+                        "BACK" -> key(KeyEvent.KEYCODE_BACK)
+                        "ALT_RIGHT" -> talkBackKey(KeyEvent.KEYCODE_DPAD_RIGHT)
+                        "ALT_LEFT" -> talkBackKey(KeyEvent.KEYCODE_DPAD_LEFT)
+                        "ALT_ENTER" -> talkBackKey(KeyEvent.KEYCODE_ENTER)
+                        else -> error("Unknown key command")
+                    }
+                    SystemClock.sleep(350); focus()
+                }
                 "keyboard" -> repeat(steps) { key(KeyEvent.KEYCODE_TAB, args.getString("reverse") == "true"); SystemClock.sleep(280); focus() }
+                "talkback" -> repeat(steps) { talkBackKey(if(args.getString("reverse")=="true") KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT); SystemClock.sleep(350); focus() }
                 "accessibility" -> {
                     val targets = mutableListOf<AccessibilityNodeInfo>()
                     fun collect(node: AccessibilityNodeInfo) {

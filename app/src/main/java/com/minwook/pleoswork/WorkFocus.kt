@@ -9,7 +9,7 @@ import androidx.compose.ui.focus.onFocusChanged
 /** Stable focus destinations survive replacement of a panel's composition. */
 class WorkFocus {
     val targets = mutableMapOf<String, FocusRequester>()
-    var current: String? = null
+    var current by mutableStateOf<String?>(null)
     var pending by mutableStateOf<Pair<Int, String>?>(null)
         private set
     private var serial = 0

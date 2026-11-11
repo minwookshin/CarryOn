@@ -42,8 +42,8 @@ class MainActivity : ComponentActivity() {
             var presentedLaunch by rememberSaveable { mutableLongStateOf(Long.MIN_VALUE) }
             // One public handoff per launcher entry. Route/state callbacks and onResume
             // must not reopen navigation or repeatedly swap the user's two windows.
-            LaunchedEffect(launchToken, work.navigationMode, vehicle.navigationStatus, vehicle.canWork, lifecycle) {
-                if (work.navigationMode == GuidanceMode.NATIVE_SAMPLE && vehicle.canWork &&
+            LaunchedEffect(launchToken, work.canPresentNative, session.workVisible, vehicle.navigationStatus, vehicle.canWork, lifecycle) {
+                if (work.canPresentNative && session.workVisible && vehicle.canWork &&
                     vehicle.navigationStatus == "연결됨" && lifecycle.isAtLeast(Lifecycle.State.STARTED) &&
                     presentedLaunch != launchToken) {
                     // Let Pleos finish the launcher transition before handing off.

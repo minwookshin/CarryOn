@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.TextStyle
@@ -99,7 +100,10 @@ object WorkDimens {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val tooltip = rememberTooltipState()
-    LaunchedEffect(focused) { if(focused) tooltip.show() else tooltip.dismiss() }
+    val accessibility = LocalContext.current.getSystemService(android.view.accessibility.AccessibilityManager::class.java)
+    // TalkBack already speaks the icon label. A focus tooltip creates another accessibility
+    // window and can trap sequential reading at the toolbar on the Pleos emulator.
+    LaunchedEffect(focused) { if(focused && accessibility?.isTouchExplorationEnabled != true) tooltip.show() else tooltip.dismiss() }
     TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
         tooltip = { PlainTooltip { Text(label) } }, state = tooltip, focusable = false) {
         IconButton(onClick = onClick, enabled = enabled, interactionSource = interaction,

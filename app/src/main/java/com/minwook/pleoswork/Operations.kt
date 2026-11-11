@@ -26,6 +26,8 @@ data class LedgerVisit(
     val parking: String?, val target: NavTarget? = null, val phase: FacilityPhase = FacilityPhase.UNKNOWN,
     val dock: String? = null, val registeredAt: Long? = null, val revision: Long = 0,
     val requiredLow: Float? = null, val requiredHigh: Float? = null,
+    val timeWindow: String? = null, val cargoInstructions: String? = null,
+    val receiptInstructions: String? = null, val plannedStop: String? = null,
 )
 
 data class CargoSample(
@@ -73,6 +75,7 @@ data class WorkLedger(
         require(tasks.map { it.id }.distinct().size == tasks.size && currentVisitId.let { it == null || visits.any { v -> v.id == it } })
         require(cursor >= 0 && activeRevision >= 0 && dayRevision >= 0 && drivingRevision >= 0 && lastSyncAt >= 0)
         require(visits.all { v -> v.id.isNotBlank() && v.name.isNotBlank() && v.round > 0 && v.revision >= 0 && v.phase in FacilityPhase.entries &&
+            listOf(v.timeWindow, v.cargoInstructions, v.receiptInstructions, v.plannedStop).all { it == null || it.length <= 300 } &&
             (v.target == null || v.target.valid()) && (v.requiredLow == null && v.requiredHigh == null ||
                 v.requiredLow?.isFinite() == true && v.requiredHigh?.isFinite() == true && v.requiredLow <= v.requiredHigh) })
         require(tasks.all { t -> t.id.isNotBlank() && t.number.isNotBlank() && visits.any { it.id == t.visitId } &&
@@ -195,6 +198,8 @@ object BoardNavigation {
                 arrivedAt = if (total == 18_000L) now else 0)
         }
         if (r.status == GuidanceStatus.ARRIVED || r.status == GuidanceStatus.FAILED) return r
+        // Linking/settings may stay open for minutes before the first actual SDK request.
+        if (r.status == GuidanceStatus.REQUESTED && r.issuedAt == 0L) return r
         val reading = car.navigation?.takeIf { it.fresh(now) && r.issuedAt > 0 && it.receivedAt >= r.issuedAt }
         val matches = reading != null && r.target?.let { requestedDestinationMatches(it, reading.target) } == true
         if (r.status == GuidanceStatus.REQUESTED) return when {
