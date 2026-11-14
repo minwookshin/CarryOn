@@ -1,4 +1,4 @@
-# Pleos Work · 2.2
+# Pleos Work · 2.3
 
 택배·장거리 화물 기사에게 **기존 업무 시스템의 현재 작업과 미완료 기록**을 보여주는 Kotlin/Compose 차량 앱입니다. Carbon 색상·IBM Plex Sans KR·둥근 아이콘을 유지합니다. 공유된 `driver-app-flow.md`와 요약본을 기준으로 흐름을 재구성했습니다.
 
@@ -6,7 +6,7 @@
 
 ## 직접 실행
 
-**[2.2 APK 다운로드](https://github.com/minwookshin/pleos-work/releases/tag/v2.2-workflow)** · **[빌드 없이 설치하기](docs/INSTALL.md)** · [2.2 시험 항목](docs/TEST.md)
+**[2.3 APK 다운로드](https://github.com/minwookshin/pleos-work/releases/tag/v2.3-workflow)** · **[빌드 없이 설치하기](docs/INSTALL.md)** · [2.3 시험 항목](docs/TEST.md)
 
 1. Pleos 에뮬레이터에서 APK를 설치하고 앱을 엽니다. 처음에는 업무 유형과 냉장·냉동 기본 옵션을 정하고 **현재 업무로**를 누릅니다. QR은 매번 요구하지 않습니다.
 2. Mac에서 `./scripts/run-local-integration.sh`를 실행합니다. `ANDROID_HOME` 또는 `ANDROID_SDK_ROOT`에 SDK 경로를 설정하세요.
@@ -14,11 +14,13 @@
 4. 차량 앱의 **설정 → 단말 연결**에서 표시된 코드를 확인하고, Mac 단말에서 같은 코드를 승인합니다.
 5. 단말에서 결과나 현재 작업을 전송하면 차량 앱이 약 2초 간격으로 수신합니다.
 
-[택배·화물 시험 순서](integration/README.md) · [API·인증·센서 계약](integration/CONTRACT.md) · [2.2 변경과 검증](WORKFLOW-2.2.md)
+[택배·화물 시험 순서](integration/README.md) · [API·인증·센서 계약](integration/CONTRACT.md) · [2.3 변경과 검증](WORKFLOW-2.3.md)
 
 처음 설정을 마쳐도 예시 배차나 기본 내비가 자동 시작되지 않습니다. 빈 업무 화면에서 **예시 업무 보기**를 선택하면 로컬 예시 지도와 배차를 볼 수 있습니다. 처음부터 끝까지 결과를 보내며 시험할 때는 위 Mac 단말을 연결하세요. 설정의 **업무 유형 · 차량 옵션**은 기본값만 바꾸며 현재 배차·작업·연결을 유지합니다.
 
 ## 화면과 흐름
+
+- 상단은 **기사 이름 | 업무 유형**, 본문은 업무 내용에 집중합니다. 하단의 현재 업무·운송 현황·설정 탭을 누르거나 오른쪽 업무 영역을 좌우로 스와이프해 이동합니다. 지도는 고정되고 세로 스크롤은 내용을 탐색합니다.
 
 - 최초 택배/장거리 화물 및 냉장·냉동 옵션을 선택하고 이후 진행 중 업무를 복원합니다. 이전 1.25 기록은 보존·이전하며 24시간 경과로 폐기하지 않습니다.
 - 택배는 회차 → 작업 구역 → 건물 → 출입구 → 고유 물품 ID를 유지합니다. 부분 배송, 중간 집하·터미널 인계·배송 재개, 같은 주소의 다음 회차, 이전 구역의 늦은 결과를 처리합니다.
@@ -45,7 +47,7 @@
 
 ## 개발
 
-versionCode **29**, versionName **2.2-workflow**. Kotlin 2.1.20 / Compose / AGP 8.9.2 / Gradle 8.11.1. 이 Mac은 Android Studio의 JBR 21로 빌드했습니다.
+versionCode **30**, versionName **2.3-workflow**. Kotlin 2.1.20 / Compose / AGP 8.9.2 / Gradle 8.11.1. 이 Mac은 Android Studio의 JBR 21로 빌드했습니다.
 
 ```sh
 ./gradlew testDebugUnitTest assembleDebug lintDebug

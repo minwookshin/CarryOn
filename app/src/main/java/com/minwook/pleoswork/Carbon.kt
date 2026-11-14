@@ -20,6 +20,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -96,7 +98,7 @@ object WorkDimens {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun IconAction(icon: Int, label: String, enabled: Boolean = true, isSelected: Boolean? = null, focusKey: String = label, onClick: () -> Unit) {
+@Composable fun IconAction(icon: Int, label: String, enabled: Boolean = true, isSelected: Boolean? = null, focusKey: String = label, role: Role? = null, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val tooltip = rememberTooltipState()
@@ -107,7 +109,7 @@ object WorkDimens {
     TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
         tooltip = { PlainTooltip { Text(label) } }, state = tooltip, focusable = false) {
         IconButton(onClick = onClick, enabled = enabled, interactionSource = interaction,
-            modifier = Modifier.size(WorkDimens.control).carFocusOutline(focusKey).semantics { isSelected?.let { this.selected = it } }) {
+            modifier = Modifier.size(WorkDimens.control).carFocusOutline(focusKey).semantics { isSelected?.let { this.selected = it }; role?.let { this.role = it } }) {
             Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
                 CarbonIcon(icon, label)
                 if(isSelected == true) Box(Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp)
