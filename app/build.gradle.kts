@@ -11,8 +11,8 @@ android {
         applicationId = "com.minwook.pleoswork"
         minSdk = 28
         targetSdk = 34
-        versionCode = 28
-        versionName = "2.1-workflow"
+        versionCode = 29
+        versionName = "2.2-workflow"
         testInstrumentationRunner = "com.minwook.pleoswork.WorkAccessibilityProbe"
         buildConfigField("String", "WORK_API_URL", "\"${providers.gradleProperty("workApiUrl").orElse("").get()}\"")
     }

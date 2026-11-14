@@ -21,6 +21,33 @@ val List<LedgerTask>.confirmedComplete: Boolean get() = isNotEmpty() && all { it
 val WorkLedger.attentionKind: TaskKind? get() = currentTasks.firstOrNull { it.kind == primaryKind && it.needsAttention }?.kind
     ?: currentTasks.firstOrNull { it.needsAttention }?.kind ?: primaryKind
 
+val WorkLedger.serviceLabel: String get() = if (mode == ServiceMode.PARCEL) "택배" else "장거리 화물"
+
+/** Preview follows the supplied visit order. Only CURRENT events change the actual destination. */
+fun upcomingVisits(l: WorkLedger): List<LedgerVisit> {
+    if (l.dayClosed || l.current == null) return emptyList()
+    val currentIndex = l.visits.indexOfFirst { it.id == l.currentVisitId }
+    return l.visits.drop(currentIndex + 1).filter { visit ->
+        !l.tasks.filter { it.visitId == visit.id }.confirmedComplete
+    }
+}
+
+/** Separate task kinds and units so receipts, returns and freight handling are not counted as parcels. */
+fun remainingQuantityText(tasks: List<LedgerTask>): String {
+    if (tasks.isEmpty()) return "수량 미수신"
+    val quantities = tasks.filter { it.remaining > 0 }.groupBy { it.kind to it.unit }
+        .map { (key, items) -> "${key.first.label} ${items.sumOf { it.remaining }}${key.second}" }
+    val pending = tasks.count { it.awaitingSync }
+    return (quantities + listOfNotNull(if (pending > 0) "전송 대기 ${pending}건" else null))
+        .joinToString(" · ").ifBlank { "처리 완료" }
+}
+
+data class WorkMapLayout(val beside: Boolean, val above: Boolean)
+fun workMapLayout(width: Float, mode: GuidanceMode): WorkMapLayout {
+    val visible = mode == GuidanceMode.DEMO
+    return WorkMapLayout(beside = visible && width >= 1150f, above = visible && width < 1150f)
+}
+
 enum class WorkHeadline { EMPTY, ACTIVE, PENDING, RECEIPT, COMPLETE, DRIVING_ENDED, DAY_CLOSED }
 data class WorkSummary(val state: WorkHeadline, val title: String, val detail: String)
 

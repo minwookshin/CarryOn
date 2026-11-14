@@ -61,8 +61,9 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
             if (ledger == null) {
                 CompositionLocalProvider(LocalFocusScope provides "setup") { BoardSetup(s, car.canWork, false, session::selectMode) }
             } else BoxWithConstraints {
-                val mapBeside = maxWidth >= 1150.dp && s.navigationMode == GuidanceMode.DEMO && !s.expanded
-                val canExpand = maxWidth >= 1150.dp
+                val mapLayout = workMapLayout(maxWidth.value, s.navigationMode)
+                val mapBeside = mapLayout.beside
+                val canExpand = maxWidth >= 1150.dp && !mapBeside
                 Column(Modifier.fillMaxSize()) {
                     CompositionLocalProvider(LocalFocusScope provides "toolbar") {
                         Row(Modifier.fillMaxWidth().heightIn(min = WorkDimens.control).padding(horizontal = 12.dp)
@@ -77,10 +78,11 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
                     if (!car.canWork) BoardNotice("주행 중에는 요약을 표시합니다 · 상세는 정차 후 P에서", false)
                     else if (car.parkingBrake != true) BoardNotice(if (car.parkingBrake == false) "주차 브레이크 해제 · 차량에서 확인하세요" else "주차 브레이크 확인 불가 · 직접 확인하세요", true)
                     if (!s.connected && !ledger.streamId.startsWith("local-")) BoardNotice("${if (s.connectionMessage.isBlank()) "연결 확인 필요" else s.connectionMessage} · 마지막 ${timeText(ledger.lastSyncAt)}", false)
-                    if (ledger.refrigerated && ledger.current != null && page !in setOf("settings","mode")) {
+                    if (ledger.refrigerated && ledger.current != null) {
                         val cargo = cargoStatus(ledger, now)
                         if(cargo.exceptional) BoardNotice(cargo.title, cargo.warning)
                     }
+                    if (mapLayout.above) BoardMap(s, Modifier.fillMaxWidth().height(196.dp), compact = true)
                     Row(Modifier.weight(1f).fillMaxWidth()) {
                         if (mapBeside) {
                             BoardMap(s, Modifier.weight(.55f).fillMaxHeight())
@@ -88,12 +90,13 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
                         }
                         CompositionLocalProvider(LocalFocusScope provides "detail") {
                             Column(Modifier.weight(if (mapBeside) .45f else 1f).fillMaxHeight()
-                                .semantics { isTraversalGroup = true; traversalIndex = 2f; paneTitle = when(page) { "settings" -> "연결과 화면 설정"; "overview" -> "운송 현황"; else -> "현재 업무" } }) {
-                                if (page != "work" || entrance != null) SectionHeader(if (entrance != null) entrance!!.replace("|", " · ") else if (page == "overview") "운송 현황" else if (page == "mode") "업무 유형" else "연결과 화면 설정", ::home, "현재 업무로 돌아가기")
+                                .semantics { isTraversalGroup = true; traversalIndex = 2f; paneTitle = when(page) { "settings" -> "연결과 화면 설정"; "overview" -> "운송 현황"; "visits" -> "예정 방문지"; else -> "현재 업무" } }) {
+                                if (page != "work" || entrance != null) SectionHeader(if (entrance != null) entrance!!.replace("|", " · ") else if (page == "overview") "운송 현황" else if (page == "mode") "업무 유형" else if (page == "visits") "예정 방문지" else "연결과 화면 설정", ::home, "현재 업무로 돌아가기")
                                 when (page) {
                                     "mode" -> BoardSetup(s, car.canWork, true, { mode, cold -> session.selectMode(mode,cold); home() })
                                     "settings" -> BoardSettings(s, car, session, now, { open("mode") }, ::home)
                                     "overview" -> BoardOverview(s, car, now)
+                                    "visits" -> BoardVisitList(ledger)
                                     else -> {
                                         if (entrance != null && car.canWork) Box(Modifier.weight(1f)) { BoardItems(ledger.currentTasks.filter { "${it.building}|${it.entrance}" == entrance }) }
                                         else if (s.expanded && canExpand && car.canWork) Row(Modifier.weight(1f)) {
@@ -102,7 +105,8 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
                                             Box(Modifier.weight(1f)) { CompositionLocalProvider(LocalFocusScope provides "overview-side") { BoardOverview(s, car, now) } }
                                         } else Box(Modifier.weight(1f)) { BoardCurrent(s,car,now,workScroll,{ entrance = it; focus.moveTo("detail/back") }, { open("settings") }, session::loadExample) }
                                         Divider()
-                                        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        UpcomingDestinations(ledger, car.canWork) { open("visits") }
+                                        if (s.navigationMode == GuidanceMode.NATIVE_SAMPLE) Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                                             Text(if (car.canWork && car.parkingBrake == true) "주차 브레이크 체결" else "",
                                                 Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             IconAction(R.drawable.ic_location, if (s.route == null || s.route.status == GuidanceStatus.FAILED) "현재 목적지 안내 시작" else "현재 목적지 내비 보기",
@@ -175,7 +179,7 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
             ActionButton("예시 업무 보기", Modifier.fillMaxWidth(), secondary=true, enabled=car.canWork, icon=R.drawable.ic_play, onClick=example)
             return@Column
         }
-        Text("${v.round}회차 · ${v.operation}${if(l.streamId.startsWith("local-")) " · 예시" else ""}",
+        Text("${l.serviceLabel} · ${v.round}회차 · ${v.operation}${if(l.streamId.startsWith("local-")) " · 예시" else ""}",
             style=MaterialTheme.typography.labelMedium, color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text(if(ended) summary.title else v.name, Modifier.semantics { heading() }, style=MaterialTheme.typography.headlineMedium)
         if(ended) {
@@ -222,8 +226,10 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
             }
         }
         if(l.currentTasks.any { it.location != null && it.needsAttention }) BoardFact("확인된 적재 위치",l.currentTasks.filter { it.needsAttention }.mapNotNull { it.location }.distinct().joinToString(" · "))
-        if(car.canWork) {
-            BoardDisclosure("현장 · 처리 기록",details,"work-details") { details=!details }
+        val hasSiteDetails = (!arrived && v.parking != null) || v.cargoInstructions != null || v.receiptInstructions != null ||
+            (l.mode == ServiceMode.FREIGHT && (arrived || v.registeredAt != null))
+        if(car.canWork && hasSiteDetails) {
+            BoardDisclosure("현장 안내",details,"work-details") { details=!details }
             if(details) {
                 if(!arrived) v.parking?.let { BoardFact("정차 안내",it) }
                 v.cargoInstructions?.let { BoardFact("화물 조건",it) }
@@ -231,13 +237,11 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
                 if(l.mode==ServiceMode.FREIGHT) {
                     s.route?.takeIf { arrived && it.arrivedAt>0 }?.let { BoardFact("현장 체류","도착 후 ${((now-it.arrivedAt).coerceAtLeast(0)/60000)}분 · 위치 기준") }
                     v.registeredAt?.let { BoardFact("접수 기록","${timeText(it)} · 경과 ${((now-it).coerceAtLeast(0)/60000)}분") }
-                    if(summary.state==WorkHeadline.COMPLETE) BoardFact("처리 확인",l.currentTasks.maxOfOrNull { it.updatedAt }?.let(::timeText) ?: "미수신")
-                    BoardFact("출차 · 다음 배차","확정 정보 미수신")
                 }
-                if(l.mode==ServiceMode.FREIGHT || l.primaryKind!=TaskKind.DELIVERY) l.currentTasks.forEach { TaskRecord(it) }
             }
         }
         Text("${l.sourceLabel} · 마지막 갱신 ${timeText(l.lastSyncAt)}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if (s.expanded && s.navigationMode == GuidanceMode.DEMO && car.canWork) BoardOverview(s, car, now, scrollable = false)
     }
 }
 
@@ -351,13 +355,15 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
     if(compact && remaining.size>3) Text("그 외 ${remaining.size-3}곳 · 운송 현황에서 확인",style=MaterialTheme.typography.bodySmall)
 }
 
-@Composable private fun BoardOverview(s: BoardState, car: VehicleState, now: Long) {
+@Composable private fun BoardOverview(s: BoardState, car: VehicleState, now: Long, scrollable: Boolean = true) {
     val l=s.ledger ?: return
     var records by rememberSaveable { mutableStateOf(false) }
     var finished by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(24.dp)) {
-        Text("화물 · 남은 업무",Modifier.semantics { heading() },style=MaterialTheme.typography.titleLarge)
-        RemainingWork(l)
+    val content = if (scrollable) Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp) else Modifier.fillMaxWidth()
+    Column(content,verticalArrangement=Arrangement.spacedBy(24.dp)) {
+        Text("${l.serviceLabel} · 남은 업무",Modifier.semantics { heading() },style=MaterialTheme.typography.titleLarge)
+        BoardFact("현재 방문지 · ${l.current?.name ?: "배정 대기"}",remainingQuantityText(l.currentTasks))
+        BoardVisitList(l, Modifier.fillMaxWidth(), scrollable = false)
         Text("운송장 기준 수량 · 실제 적재·중량은 별도 확인",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(l.dayClosed || l.drivingEnded) BoardFact("종료 기록", workSummary(l).title)
         val completed=l.visits.filter { v -> l.tasks.filter { it.visitId==v.id }.confirmedComplete }
@@ -380,19 +386,65 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
     }
 }
 
-@Composable private fun BoardMap(s: BoardState, modifier: Modifier) {
+@Composable private fun UpcomingDestinations(l: WorkLedger, allowed: Boolean, more: () -> Unit) {
+    val upcoming = upcomingVisits(l)
+    if (upcoming.isEmpty()) return
+    val preview = upcoming.take(2)
+    val ids = preview.map { it.id }.toSet()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(if(preview.size == 2) "다음 두 곳 · 합계" else "다음 방문지", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(remainingQuantityText(l.tasks.filter { it.visitId in ids }), style = MaterialTheme.typography.bodyMedium)
+            }
+            if (upcoming.size > 2) IconAction(R.drawable.ic_more, "나머지 방문지 ${upcoming.size - 2}곳 보기",
+                enabled = allowed, focusKey = "more-visits", onClick = more)
+        }
+        preview.forEachIndexed { index, visit ->
+            Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if(index == 0) "바로 다음" else "그 다음", Modifier.width(100.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(visit.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                Text(remainingQuantityText(l.tasks.filter { it.visitId == visit.id }), Modifier.widthIn(max = 240.dp), style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable private fun BoardVisitList(l: WorkLedger, modifier: Modifier = Modifier.fillMaxSize(), scrollable: Boolean = true) {
+    val upcoming = upcomingVisits(l)
+    var all by rememberSaveable(l.streamId, l.currentVisitId) { mutableStateOf(scrollable) }
+    val content = if (scrollable) modifier.verticalScroll(rememberScrollState()).padding(24.dp) else modifier
+    Column(content, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Text("${l.serviceLabel} · 다음 예정", Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
+        if (upcoming.isEmpty()) Text("다음 방문지 배정 대기", style = MaterialTheme.typography.bodyLarge)
+        (if (all) upcoming else upcoming.take(2)).forEachIndexed { index, visit ->
+            val label = when(index) { 0 -> "바로 다음"; 1 -> "그 다음"; else -> "${index + 1}번째" }
+            BoardFact("$label · ${visit.round}회차 · ${visit.name}", remainingQuantityText(l.tasks.filter { it.visitId == visit.id }))
+        }
+        if (upcoming.size > 2) ActionButton(if(all) "두 곳만 보기" else "… 나머지 ${upcoming.size - 2}곳 보기",
+            Modifier.fillMaxWidth(), secondary = true, focusKey = "remaining-visits") { all = !all }
+        val previous = l.visits.take(l.visits.indexOfFirst { it.id == l.currentVisitId }.coerceAtLeast(0))
+            .filter { visit -> l.tasks.any { it.visitId == visit.id && it.needsAttention } }
+        if (previous.isNotEmpty()) {
+            Text("이전 방문지 · 미처리", Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
+            previous.forEach { visit -> BoardFact(visit.name, remainingQuantityText(l.tasks.filter { it.visitId == visit.id })) }
+        }
+    }
+}
+
+@Composable private fun BoardMap(s: BoardState, modifier: Modifier, compact: Boolean = false) {
     val l=s.ledger ?: return
     val route=s.route
     Column(modifier.background(MaterialTheme.colorScheme.surfaceVariant).semantics { isTraversalGroup=true; traversalIndex=1f }) {
-        Row(Modifier.fillMaxWidth().padding(24.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalAlignment=Alignment.CenterVertically) {
+        if (!compact) Row(Modifier.fillMaxWidth().padding(24.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalAlignment=Alignment.CenterVertically) {
             CarbonIcon(R.drawable.ic_location,null)
             Text(l.current?.name ?: "목적지 대기",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
         }
         Box(Modifier.weight(1f).fillMaxWidth().clearAndSetSemantics { contentDescription="예시 이동 지도. ${l.current?.name}. ${if(route?.status==GuidanceStatus.ARRIVED) "도착" else "이동 체험"}" }) {
             OfflineDemoMap(l.visits.indexOfFirst { it.id==l.currentVisitId }.coerceAtLeast(0)%3,false,route?.progress ?: 0f,Modifier.fillMaxSize(),followVehicle=true)
         }
-        Text(mapStatus(s),Modifier.padding(24.dp),style=MaterialTheme.typography.titleMedium)
-        Text("예시 이동 · © OpenStreetMap contributors · ODbL",Modifier.padding(horizontal=24.dp,vertical=12.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!compact) Text(mapStatus(s),Modifier.padding(24.dp),style=MaterialTheme.typography.titleMedium)
+        Text("예시 이동 · © OpenStreetMap contributors · ODbL",Modifier.padding(horizontal=24.dp,vertical=if(compact) 4.dp else 12.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -421,7 +473,7 @@ private fun modeName(mode: ServiceMode) = if (mode == ServiceMode.PARCEL) "택�
         ActionButton(if(s.expanded) "업무 한 칸으로" else "정차 중 상세 화면",Modifier.fillMaxWidth(),secondary=true,enabled=car.canWork,icon=R.drawable.ic_expand) { session.board.expand() }
         ActionButton(if(s.largeText) "기본 글자 크기" else "큰 글자",Modifier.fillMaxWidth(),secondary=true,enabled=car.canWork,icon=R.drawable.ic_document) { session.board.font() }
         Divider(); Text("내비게이션",Modifier.semantics { heading() },style=MaterialTheme.typography.titleLarge)
-        ActionButton("기본 내비와 함께 보기",Modifier.fillMaxWidth(),secondary=true,isSelected=s.navigationMode==GuidanceMode.NATIVE_SAMPLE,enabled=car.canWork,icon=R.drawable.ic_location) { session.board.navigationMode(GuidanceMode.NATIVE_SAMPLE); home() }
+        ActionButton("기본 내비와 함께 보기",Modifier.fillMaxWidth(),secondary=true,isSelected=s.navigationMode==GuidanceMode.NATIVE_SAMPLE,enabled=car.canWork,icon=R.drawable.ic_location) { session.board.navigationMode(GuidanceMode.NATIVE_SAMPLE); home(); session.gateway.openNavigation() }
         ActionButton("앱 지도 · 이동 시험",Modifier.fillMaxWidth(),secondary=true,isSelected=s.navigationMode==GuidanceMode.DEMO,enabled=car.canWork,icon=R.drawable.ic_play) { session.board.navigationMode(GuidanceMode.DEMO); home() }
         Text("예시 배차의 기본 내비 목적지는 공식 SDK 시험 좌표입니다. 회사 목적지와 센서 정보는 별도 연동으로 받습니다.",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         s.ledger?.let { BoardFact("마지막 업무 갱신",timeText(it.lastSyncAt)) }

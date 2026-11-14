@@ -108,4 +108,50 @@ class OperationsPresentationTest {
     @Test fun freshnessTimeIncludesDateForOvernightWork() {
         assertTrue(recordTime(now).contains("/")); assertEquals("미수신",recordTime(0))
     }
+
+    @Test fun nextVisitsFollowDispatchOrderAndNeverReplaceCurrentWork() {
+        val l = fixture()
+        assertEquals(listOf("p-zone-2", "p-collect"), upcomingVisits(l).take(2).map { it.id })
+        assertEquals("p-zone-1", l.currentVisitId)
+        assertTrue(upcomingVisits(l.copy(dayClosed = true)).isEmpty())
+        assertTrue(upcomingVisits(l.copy(currentVisitId = null)).isEmpty())
+        assertTrue(upcomingVisits(l.copy(currentVisitId = "p-final")).isEmpty())
+    }
+
+    @Test fun nextVisitPreviewRetainsPendingResultsAndSkipsConfirmedCompletion() {
+        val l = fixture()
+        val tasks = l.tasks.map { if(it.visitId == "p-zone-2") it.copy(completed = it.quantity, sync = SyncMark.PENDING) else it }
+        val pending = l.copy(tasks = tasks)
+        assertEquals("p-zone-2", upcomingVisits(pending).first().id)
+        assertTrue(remainingQuantityText(pending.tasks.filter { it.visitId == "p-zone-2" }).startsWith("전송 대기"))
+        val confirmed = pending.copy(tasks = pending.tasks.map { if(it.visitId == "p-zone-2") it.copy(sync = SyncMark.CONFIRMED) else it })
+        assertEquals("p-collect", upcomingVisits(confirmed).first().id)
+    }
+
+    @Test fun quantitiesUseActualRemainingCountsAndKeepWorkKindsSeparate() {
+        val parcel = fixture().tasks.first()
+        val two = parcel.copy(id = "two", quantity = 2)
+        val six = parcel.copy(id = "six", quantity = 6)
+        assertEquals("배송 8개", remainingQuantityText(listOf(two, six)))
+        assertEquals("배송 58개", remainingQuantityText(listOf(two, six.copy(quantity = 56))))
+        assertEquals("배송 4개", remainingQuantityText(listOf(two, six.copy(completed = 4, sync = SyncMark.CONFIRMED))))
+        assertEquals("배송 2개 · 인수 1건", remainingQuantityText(listOf(two, six.copy(kind = TaskKind.RECEIPT, quantity = 1, unit = "건"))))
+        assertEquals("배송 2개 · 배송 6상자", remainingQuantityText(listOf(two, six.copy(unit = "상자"))))
+        assertEquals("수량 미수신", remainingQuantityText(emptyList()))
+    }
+
+    @Test fun commercialDeliveryKeepsItsAssignedParcelService() {
+        val l = fixture().copy(currentVisitId = "p-zone-2")
+        assertEquals("한빛상가", l.current!!.name)
+        assertEquals("택배", l.serviceLabel)
+        assertEquals(TaskKind.DELIVERY, l.primaryKind)
+        assertEquals("장거리 화물", fixture("freight").serviceLabel)
+    }
+
+    @Test fun mapRemainsVisibleWhenAppIsResizedOrAViewChanges() {
+        assertEquals(WorkMapLayout(true, false), workMapLayout(1680f, GuidanceMode.DEMO))
+        assertEquals(WorkMapLayout(false, true), workMapLayout(840f, GuidanceMode.DEMO))
+        assertEquals(WorkMapLayout(false, true), workMapLayout(420f, GuidanceMode.DEMO))
+        assertEquals(WorkMapLayout(false, false), workMapLayout(1680f, GuidanceMode.NATIVE_SAMPLE))
+    }
 }
