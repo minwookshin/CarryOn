@@ -71,7 +71,6 @@ private val workPageLabels = listOf("현재 업무", "운송 현황", "연결과
     fun back() {
         when (detailPage) {
             "mode" -> { detailPage = null; focus.moveTo("settings/mode") }
-            "visits" -> { detailPage = null; focus.moveTo("detail/more-visits") }
             else -> home()
         }
     }
@@ -102,82 +101,77 @@ private val workPageLabels = listOf("현재 업무", "운송 현황", "연결과
                 val mapLayout = workMapLayout(maxWidth.value, s.navigationMode)
                 val mapBeside = mapLayout.beside
                 val canExpand = maxWidth >= 1150.dp && !mapBeside
-                Column(Modifier.fillMaxSize()) {
-                    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 24.dp, vertical = 8.dp)
-                        .semantics(mergeDescendants = true) { traversalIndex = 0f },
-                        horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(ledger.driverName, style = MaterialTheme.typography.bodyMedium)
-                        Text("|", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
-                        Text(ledger.serviceLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxSize()) {
+                    if (mapBeside) {
+                        BoardNavigationMap(s, Modifier.weight(1f).fillMaxHeight())
+                        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
-                    Divider()
-                    if (!car.canWork) BoardNotice("주행 중에는 요약을 표시합니다 · 상세는 정차 후 P에서", false)
-                    else if (car.parkingBrake != true) BoardNotice(if (car.parkingBrake == false) "주차 브레이크 해제 · 차량에서 확인하세요" else "주차 브레이크 확인 불가 · 직접 확인하세요", true)
-                    if (!s.connected && !ledger.streamId.startsWith("local-")) BoardNotice("${if (s.connectionMessage.isBlank()) "연결 확인 필요" else s.connectionMessage} · 마지막 ${timeText(ledger.lastSyncAt)}", false)
-                    if (ledger.refrigerated && ledger.current != null) {
-                        val cargo = cargoStatus(ledger, now)
-                        if(cargo.exceptional) BoardNotice(cargo.title, cargo.warning)
-                    }
-                    if (mapLayout.above) BoardMap(s, Modifier.fillMaxWidth().height(196.dp), compact = true)
-                    Row(Modifier.weight(1f).fillMaxWidth()) {
-                        if (mapBeside) {
-                            BoardMap(s, Modifier.weight(.55f).fillMaxHeight())
-                            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Column(Modifier.weight(1f).fillMaxHeight()) {
+                        Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 24.dp, vertical = 8.dp)
+                            .semantics(mergeDescendants = true) { traversalIndex = 0f },
+                            horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(ledger.driverName, style = MaterialTheme.typography.bodyMedium)
+                            Text("|", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            Text(ledger.serviceLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Column(Modifier.weight(if (mapBeside) .45f else 1f).fillMaxHeight()) {
-                            // Keep the map outside the pager. Only the work pane follows a horizontal drag.
-                            HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), userScrollEnabled = car.canWork,
-                                key = { workPages[it] }) { index ->
-                                val tab = workPages[index]
-                                val nested = detailPage?.takeIf { (it == "mode" && tab == "settings") || (it == "visits" && tab == "work") }
-                                CompositionLocalProvider(
-                                    LocalFocusScope provides if (nested != null || tab == "work") "detail" else tab,
-                                    LocalWorkFocusEnabled provides (pager.settledPage == index)
-                                ) {
-                                    Column(Modifier.fillMaxSize().semantics {
-                                        isTraversalGroup = true; traversalIndex = 2f
-                                        paneTitle = when { nested == "mode" -> "업무 유형"; nested == "visits" -> "예정 방문지"; entrance != null && tab == "work" -> "방문지 물품"; else -> workPageLabels[index] }
-                                    }) {
-                                        if (nested != null || (entrance != null && tab == "work")) SectionHeader(
-                                            if (entrance != null) entrance!!.replace("|", " · ") else if (nested == "mode") "업무 유형" else "예정 방문지",
-                                            ::back, if (nested == "mode") "설정으로 돌아가기" else "현재 업무로 돌아가기")
-                                        when (nested ?: tab) {
-                                            "mode" -> BoardSetup(s, car.canWork, true, { mode, cold -> session.selectMode(mode,cold); home() })
-                                            "settings" -> BoardSettings(s, car, session, now, { open("mode") }, ::home)
-                                            "overview" -> BoardOverview(s, car, now)
-                                            "visits" -> BoardVisitList(ledger)
-                                            else -> {
-                                                if (entrance != null && car.canWork) Box(Modifier.weight(1f)) { BoardItems(ledger.currentTasks.filter { "${it.building}|${it.entrance}" == entrance }) }
-                                                else if (s.expanded && canExpand && car.canWork) Row(Modifier.weight(1f)) {
-                                                    Box(Modifier.weight(1f)) { BoardCurrent(s, car, now, workScroll, { entrance = it; focus.moveTo("detail/back") }, { open("settings") }, session::loadExample) }
-                                                    VerticalDivider()
-                                                    Box(Modifier.weight(1f)) { CompositionLocalProvider(LocalFocusScope provides "overview-side") { BoardOverview(s, car, now) } }
-                                                } else Box(Modifier.weight(1f)) { BoardCurrent(s,car,now,workScroll,{ entrance = it; focus.moveTo("detail/back") }, { open("settings") }, session::loadExample) }
-                                                Divider()
-                                                UpcomingDestinations(ledger, car.canWork) { open("visits") }
-                                                if (s.navigationMode == GuidanceMode.NATIVE_SAMPLE) Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(if (car.canWork && car.parkingBrake == true) "주차 브레이크 체결" else "",
-                                                        Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                    IconAction(R.drawable.ic_location, if (s.route == null || s.route.status == GuidanceStatus.FAILED) "현재 목적지 안내 시작" else "현재 목적지 내비 보기",
-                                                        enabled = car.canWork && ledger.current != null && !ledger.dayClosed && !ledger.drivingEnded, focusKey = "navigate") {
-                                                        if (s.route == null || s.route.status == GuidanceStatus.FAILED) session.board.navigate()
-                                                        if (s.navigationMode == GuidanceMode.NATIVE_SAMPLE) session.gateway.openNavigation()
-                                                    }
+                        Divider()
+                        if (!car.canWork) BoardNotice("주행 중에는 요약을 표시합니다 · 상세는 정차 후 P에서", false)
+                        else if (car.parkingBrake != true) BoardNotice(if (car.parkingBrake == false) "주차 브레이크 해제 · 차량에서 확인하세요" else "주차 브레이크 확인 불가 · 직접 확인하세요", true)
+                        if (!s.connected && !ledger.streamId.startsWith("local-")) BoardNotice("${if (s.connectionMessage.isBlank()) "연결 확인 필요" else s.connectionMessage} · 마지막 ${timeText(ledger.lastSyncAt)}", false)
+                        if (ledger.refrigerated && ledger.current != null) {
+                            val cargo = cargoStatus(ledger, now)
+                            if(cargo.exceptional) BoardNotice(cargo.title, cargo.warning)
+                        }
+                        if (mapLayout.above) BoardNavigationMap(s, Modifier.fillMaxWidth().height(196.dp), compact = true)
+                        // Keep the map outside the pager. Only the work pane follows a horizontal drag.
+                        HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), userScrollEnabled = car.canWork,
+                            key = { workPages[it] }) { index ->
+                            val tab = workPages[index]
+                            val nested = detailPage?.takeIf { it == "mode" && tab == "settings" }
+                            CompositionLocalProvider(
+                                LocalFocusScope provides if (nested != null || tab == "work") "detail" else tab,
+                                LocalWorkFocusEnabled provides (pager.settledPage == index)
+                            ) {
+                                Column(Modifier.fillMaxSize().semantics {
+                                    isTraversalGroup = true; traversalIndex = 2f
+                                    paneTitle = when { nested == "mode" -> "업무 유형"; entrance != null && tab == "work" -> "방문지 물품"; else -> workPageLabels[index] }
+                                }) {
+                                    if (nested != null || (entrance != null && tab == "work")) SectionHeader(
+                                        if (entrance != null) entrance!!.replace("|", " · ") else if (nested == "mode") "업무 유형" else "예정 방문지",
+                                        ::back, if (nested == "mode") "설정으로 돌아가기" else "현재 업무로 돌아가기")
+                                    when (nested ?: tab) {
+                                        "mode" -> BoardSetup(s, car.canWork, true, { mode, cold -> session.selectMode(mode,cold); home() })
+                                        "settings" -> BoardSettings(s, car, session, now, { open("mode") }, ::home)
+                                        "overview" -> BoardOverview(s, car, now)
+                                        else -> {
+                                            if (entrance != null && car.canWork) Box(Modifier.weight(1f)) { BoardItems(ledger.currentTasks.filter { "${it.building}|${it.entrance}" == entrance }) }
+                                            else if (s.expanded && canExpand && car.canWork) Row(Modifier.weight(1f)) {
+                                                Box(Modifier.weight(1f)) { BoardCurrent(s, car, now, workScroll, { entrance = it; focus.moveTo("detail/back") }, { open("settings") }, session::loadExample) }
+                                                VerticalDivider()
+                                                Box(Modifier.weight(1f)) { CompositionLocalProvider(LocalFocusScope provides "overview-side") { BoardOverview(s, car, now) } }
+                                            } else Box(Modifier.weight(1f)) { BoardCurrent(s,car,now,workScroll,{ entrance = it; focus.moveTo("detail/back") }, { open("settings") }, session::loadExample) }
+                                            if (s.navigationMode == GuidanceMode.NATIVE_SAMPLE) Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Text(if (car.canWork && car.parkingBrake == true) "주차 브레이크 체결" else "",
+                                                    Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                IconAction(R.drawable.ic_location, if (s.route == null || s.route.status == GuidanceStatus.FAILED) "현재 목적지 안내 시작" else "현재 목적지 내비 보기",
+                                                    enabled = car.canWork && ledger.current != null && !ledger.dayClosed && !ledger.drivingEnded, focusKey = "navigate") {
+                                                    if (s.route == null || s.route.status == GuidanceStatus.FAILED) session.board.navigate()
+                                                    if (s.navigationMode == GuidanceMode.NATIVE_SAMPLE) session.gateway.openNavigation()
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                            Divider()
-                            CompositionLocalProvider(LocalFocusScope provides "navigation") {
-                                Row(Modifier.fillMaxWidth().heightIn(min = WorkDimens.control).selectableGroup()
-                                    .semantics { isTraversalGroup = true; traversalIndex = 3f },
-                                    horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                                    listOf(R.drawable.ic_delivery, R.drawable.ic_document, R.drawable.ic_settings).forEachIndexed { index, icon ->
-                                        IconAction(icon, workPageLabels[index], enabled = index == 0 || car.canWork,
-                                            isSelected = pager.currentPage == index, focusKey = workPages[index], role = Role.Tab) { selectTab(index) }
-                                    }
+                        }
+                        Divider()
+                        CompositionLocalProvider(LocalFocusScope provides "navigation") {
+                            Row(Modifier.fillMaxWidth().heightIn(min = WorkDimens.control).selectableGroup()
+                                .semantics { isTraversalGroup = true; traversalIndex = 3f },
+                                horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                                listOf(R.drawable.ic_delivery, R.drawable.ic_document, R.drawable.ic_settings).forEachIndexed { index, icon ->
+                                    IconAction(icon, workPageLabels[index], enabled = index == 0 || car.canWork,
+                                        isSelected = pager.currentPage == index, focusKey = workPages[index], role = Role.Tab) { selectTab(index) }
                                 }
                             }
                         }
@@ -448,30 +442,6 @@ private val workPageLabels = listOf("현재 업무", "운송 현황", "연결과
     }
 }
 
-@Composable private fun UpcomingDestinations(l: WorkLedger, allowed: Boolean, more: () -> Unit) {
-    val upcoming = upcomingVisits(l)
-    if (upcoming.isEmpty()) return
-    val preview = upcoming.take(2)
-    val ids = preview.map { it.id }.toSet()
-    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(if(preview.size == 2) "다음 두 곳 · 합계" else "다음 방문지", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(remainingQuantityText(l.tasks.filter { it.visitId in ids }), style = MaterialTheme.typography.bodyMedium)
-            }
-            if (upcoming.size > 2) IconAction(R.drawable.ic_more, "나머지 방문지 ${upcoming.size - 2}곳 보기",
-                enabled = allowed, focusKey = "more-visits", onClick = more)
-        }
-        preview.forEachIndexed { index, visit ->
-            Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if(index == 0) "바로 다음" else "그 다음", Modifier.width(100.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(visit.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                Text(remainingQuantityText(l.tasks.filter { it.visitId == visit.id }), Modifier.widthIn(max = 240.dp), style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
-
 @Composable private fun BoardVisitList(l: WorkLedger, modifier: Modifier = Modifier.fillMaxSize(), scrollable: Boolean = true) {
     val upcoming = upcomingVisits(l)
     var all by rememberSaveable(l.streamId, l.currentVisitId) { mutableStateOf(scrollable) }
@@ -491,22 +461,6 @@ private val workPageLabels = listOf("현재 업무", "운송 현황", "연결과
             Text("이전 방문지 · 미처리", Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
             previous.forEach { visit -> BoardFact(visit.name, remainingQuantityText(l.tasks.filter { it.visitId == visit.id })) }
         }
-    }
-}
-
-@Composable private fun BoardMap(s: BoardState, modifier: Modifier, compact: Boolean = false) {
-    val l=s.ledger ?: return
-    val route=s.route
-    Column(modifier.background(MaterialTheme.colorScheme.surfaceVariant).semantics { isTraversalGroup=true; traversalIndex=1f }) {
-        if (!compact) Row(Modifier.fillMaxWidth().padding(24.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalAlignment=Alignment.CenterVertically) {
-            CarbonIcon(R.drawable.ic_location,null)
-            Text(l.current?.name ?: "목적지 대기",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
-        }
-        Box(Modifier.weight(1f).fillMaxWidth().clearAndSetSemantics { contentDescription="예시 이동 지도. ${l.current?.name}. ${if(route?.status==GuidanceStatus.ARRIVED) "도착" else "이동 체험"}" }) {
-            OfflineDemoMap(l.visits.indexOfFirst { it.id==l.currentVisitId }.coerceAtLeast(0)%3,false,route?.progress ?: 0f,Modifier.fillMaxSize(),followVehicle=true)
-        }
-        if (!compact) Text(mapStatus(s),Modifier.padding(24.dp),style=MaterialTheme.typography.titleMedium)
-        Text("예시 이동 · © OpenStreetMap contributors · ODbL",Modifier.padding(horizontal=24.dp,vertical=if(compact) 4.dp else 12.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

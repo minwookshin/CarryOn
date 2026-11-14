@@ -2,6 +2,7 @@ package com.minwook.pleoswork
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -41,7 +42,7 @@ fun demoMapPosition(points: List<DemoMapPoint>, progress: Float): DemoMapPoint {
 }
 
 /** Real, attributed offline map geometry; motion and dispatch names are explicitly simulated. */
-@Composable fun OfflineDemoMap(index: Int, returning: Boolean, progress: Float, modifier: Modifier = Modifier, followVehicle: Boolean = false) {
+@Composable fun OfflineDemoMap(index: Int, returning: Boolean, progress: Float, modifier: Modifier = Modifier, followVehicle: Boolean = false, zoom: Float = 1f, contentPadding: PaddingValues = PaddingValues(0.dp)) {
     val context = LocalContext.current
     val data = remember(context) {
         context.resources.openRawResource(R.raw.pangyo_map).bufferedReader().use { Gson().fromJson(it, DemoMapData::class.java) }
@@ -63,11 +64,15 @@ fun demoMapPosition(points: List<DemoMapPoint>, progress: Float): DemoMapPoint {
         val minX = route.minOf { it.x } - 90; val maxX = route.maxOf { it.x } + 90
         val minY = route.minOf { it.y } - 90; val maxY = route.maxOf { it.y } + 90
         val movingPoint = demoMapPosition(route, animated)
+        val left = contentPadding.calculateLeftPadding(layoutDirection).toPx()
+        val top = contentPadding.calculateTopPadding().toPx()
+        val viewportWidth = (size.width - left - contentPadding.calculateRightPadding(layoutDirection).toPx()).coerceAtLeast(1f)
+        val viewportHeight = (size.height - top - contentPadding.calculateBottomPadding().toPx()).coerceAtLeast(1f)
         // A short, wide map follows the vehicle instead of shrinking the whole route to a tiny thumbnail.
-        val scale = if (followVehicle) size.width / 650.0 else min(size.width / (maxX-minX), size.height / (maxY-minY))
+        val scale = (if (followVehicle) viewportWidth / 650.0 else min(viewportWidth / (maxX-minX), viewportHeight / (maxY-minY))) * zoom.coerceIn(.6f, 2.5f)
         val midX = if (followVehicle) movingPoint.x else (minX+maxX)/2
         val midY = if (followVehicle) movingPoint.y else (minY+maxY)/2
-        fun screen(p: DemoMapPoint) = Offset((size.width/2+(p.x-midX)*scale).toFloat(), (size.height/2+(p.y-midY)*scale).toFloat())
+        fun screen(p: DemoMapPoint) = Offset((left+viewportWidth/2+(p.x-midX)*scale).toFloat(), (top+viewportHeight/2+(p.y-midY)*scale).toFloat())
         fun path(points: List<DemoMapPoint>, close: Boolean = false) = Path().apply {
             points.forEachIndexed { i,p -> val q=screen(p); if(i==0) moveTo(q.x,q.y) else lineTo(q.x,q.y) }
             if(close) close()

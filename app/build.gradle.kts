@@ -11,8 +11,8 @@ android {
         applicationId = "com.minwook.pleoswork"
         minSdk = 28
         targetSdk = 34
-        versionCode = 30
-        versionName = "2.3-workflow"
+        versionCode = 31
+        versionName = "2.4-workflow"
         testInstrumentationRunner = "com.minwook.pleoswork.WorkAccessibilityProbe"
         buildConfigField("String", "WORK_API_URL", "\"${providers.gradleProperty("workApiUrl").orElse("").get()}\"")
     }
@@ -22,7 +22,7 @@ android {
             // Optional isolated UI verification, preserving the driver's installed demo session.
             if (providers.gradleProperty("qaInstall").orNull == "true") {
                 applicationIdSuffix = ".qa"
-                resValue("string", "app_name", "배송 QA")
+                resValue("string", "app_name", "CarryOn QA")
             }
         }
     }

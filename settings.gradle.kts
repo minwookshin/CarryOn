@@ -9,5 +9,5 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = "PleosWork"
+rootProject.name = "CarryOn"
 include(":app")
