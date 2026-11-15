@@ -6,7 +6,7 @@ project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 sdk_dir=${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}
 : "${sdk_dir:?Set ANDROID_SDK_ROOT or ANDROID_HOME}"
 build_tools="$sdk_dir/build-tools/${CARRYON_BUILD_TOOLS_VERSION:-35.0.0}"
-output=${CARRYON_APK_OUTPUT:-"$project_dir/apk/CarryOn-2.10-release.apk"}
+output=${CARRYON_APK_OUTPUT:-"$project_dir/apk/CarryOn_CarryOn_release.apk"}
 cd "$project_dir"
 ./gradlew --no-daemon assembleDemoRelease
 unsigned="$project_dir/app/build/outputs/apk/demoRelease/app-demoRelease-unsigned.apk"

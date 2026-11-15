@@ -4,13 +4,13 @@
 
 ## 준비한 개발 자료
 
-- 앱: [CarryOn 2.10 release APK](../apk/CarryOn-2.10-release.apk)
+- 앱: [CarryOn 2.10 release APK](../apk/CarryOn_CarryOn_release.apk)
 - 소스: 이 저장소의 제출용 최종 커밋
 - 시연: [CarryOn-Demo.mp4](../demo/CarryOn-Demo.mp4), 약 53초·1080p·무음
 - 실행 환경과 방법: [README](../README.md), [설치 안내](INSTALL.md)
 - 검증과 제한: [TEST](TEST.md), [업무 연동 규격](../integration/CONTRACT.md)
 
-GitHub의 **Code → Download ZIP**으로 소스·APK·영상을 함께 받을 수 있습니다. APK를 제출할 때는 확정된 팀명에 맞춰 `팀명_CarryOn_release.apk`로 이름을 맞춥니다. 기획서와 참가자 동의·서명 자료는 개발 저장소에 넣지 않습니다.
+GitHub의 **Code → Download ZIP**으로 소스·APK·영상을 함께 받을 수 있습니다. 팀명과 앱명은 모두 CarryOn이며, APK 파일명은 공식 형식인 `CarryOn_CarryOn_release.apk`로 맞췄습니다. 기획서와 참가자 동의·서명 자료는 개발 저장소에 넣지 않습니다.
 
 ## 접수 방법
 

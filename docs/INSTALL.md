@@ -4,12 +4,12 @@
 
 ## 1. APK 설치
 
-[CarryOn-2.10-release.apk](../apk/CarryOn-2.10-release.apk)를 내려받습니다. GitHub 파일 화면에서 **Download raw file**을 선택하세요. 저장소가 비공개인 동안에는 접근 권한이 있는 GitHub 계정으로 로그인해야 합니다.
+[CarryOn_CarryOn_release.apk](../apk/CarryOn_CarryOn_release.apk)를 내려받습니다. GitHub 파일 화면에서 **Download raw file**을 선택하세요. 공개 저장소이므로 로그인 없이 받을 수 있습니다.
 
 에뮬레이터를 실행하고 APK를 창에 드래그하거나 다음 명령을 사용합니다.
 
 ```sh
-adb install -r apk/CarryOn-2.10-release.apk
+adb install -r apk/CarryOn_CarryOn_release.apk
 adb shell am start -n com.minwook.pleoswork.demo/com.minwook.pleoswork.MainActivity
 ```
 
@@ -59,7 +59,7 @@ export CARRYON_KEY_ALIAS=carryon-demo
 sh scripts/build-demo-release.sh
 ```
 
-스크립트는 정렬·서명·서명 검증을 수행하고 `apk/CarryOn-2.10-release.apk`를 만듭니다. 비밀번호 파일은 본인만 읽을 수 있게 보관하고, 키와 비밀번호는 커밋하지 않습니다. 다른 키로 서명한 APK는 기존 시연 앱 위에 업데이트할 수 없습니다. 공개된 APK를 실행하기만 할 때는 키가 필요하지 않습니다.
+스크립트는 정렬·서명·서명 검증을 수행하고 `apk/CarryOn_CarryOn_release.apk`를 만듭니다. 비밀번호 파일은 본인만 읽을 수 있게 보관하고, 키와 비밀번호는 커밋하지 않습니다. 다른 키로 서명한 APK는 기존 시연 앱 위에 업데이트할 수 없습니다. 공개된 APK를 실행하기만 할 때는 키가 필요하지 않습니다.
 
 일반 서비스용 `release`는 `-PworkApiUrl=https://your-adapter.example`로 승인된 회사 주소를 지정하고 별도로 서명합니다. 시연 빌드의 로컬 HTTP 허용은 일반 release에 적용되지 않습니다.
 
