@@ -23,6 +23,6 @@ Tab이 미리 구성된 옆 페이지로 넘어가는 문제를 찾아 수정했
 
 ## 연동 범위
 
-업무 결과와 다음 목적지는 기존 HTTP 시험 단말로 보냅니다. 회사 시스템의 CURRENT 이벤트가 다음 방문지를 정하며 도착이나 물량 0으로 자동 추정하지 않습니다. 기본 내비 이미지의 지도 배경·실제 GPS 자동 도착 한계와 실제 회사 SSO·센서 미연결 범위는 [2.2 문서](WORKFLOW-2.2.md) 및 [연동 계약](integration/CONTRACT.md)에 명시된 그대로입니다.
+업무 결과와 다음 목적지는 기존 HTTP 시험 단말로 보냅니다. 회사 시스템의 CURRENT 이벤트가 다음 방문지를 정하며 도착이나 물량 0으로 자동 추정하지 않습니다. 기본 내비 이미지의 지도 배경·실제 GPS 자동 도착 한계와 실제 회사 SSO·센서 미연결 범위는 [2.2 문서](WORKFLOW-2.2.md) 및 [연동 계약](../../integration/CONTRACT.md)에 명시된 그대로입니다.
 
 표준 [Compose Pager](https://developer.android.com/develop/ui/compose/layouts/pager)를 사용합니다. 별도 스와이프 완료 제스처는 없습니다.

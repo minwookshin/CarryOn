@@ -11,19 +11,31 @@ android {
         applicationId = "com.minwook.pleoswork"
         minSdk = 28
         targetSdk = 34
-        versionCode = 31
-        versionName = "2.4-workflow"
+        versionCode = 37
+        versionName = "2.10-workflow"
         testInstrumentationRunner = "com.minwook.pleoswork.WorkAccessibilityProbe"
         buildConfigField("String", "WORK_API_URL", "\"${providers.gradleProperty("workApiUrl").orElse("").get()}\"")
+        buildConfigField("boolean", "ALLOW_LOCAL_TEST_SERVER", "false")
     }
     buildFeatures { compose = true; buildConfig = true }
     buildTypes {
         getByName("debug") {
+            buildConfigField("boolean", "ALLOW_LOCAL_TEST_SERVER", "true")
             // Optional isolated UI verification, preserving the driver's installed demo session.
             if (providers.gradleProperty("qaInstall").orNull == "true") {
                 applicationIdSuffix = ".qa"
                 resValue("string", "app_name", "CarryOn QA")
             }
+        }
+        create("demoRelease") {
+            initWith(getByName("release"))
+            // An installable contest demo, isolated from the driver's existing app data.
+            isDebuggable = false
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-demo"
+            buildConfigField("boolean", "ALLOW_LOCAL_TEST_SERVER", "true")
+            matchingFallbacks += listOf("release")
+            buildConfigField("String", "WORK_API_URL", "\"${providers.gradleProperty("workApiUrl").orElse("http://127.0.0.1:8798").get()}\"")
         }
     }
     compileOptions {
@@ -32,6 +44,12 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+}
+androidComponents {
+    onVariants(selector().withBuildType("demoRelease")) { variant ->
+        // Compress DEX for the downloadable demo; bytecode and runtime behavior are unchanged.
+        variant.packaging.dex.useLegacyPackaging.set(true)
+    }
 }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.03.01"))

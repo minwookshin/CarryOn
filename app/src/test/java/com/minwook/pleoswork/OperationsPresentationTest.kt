@@ -57,7 +57,8 @@ class OperationsPresentationTest {
     @Test fun completedCurrentVisitWaitsForRealAssignmentWithoutEndingDay() {
         val l=finish(fixture())
         assertEquals(WorkHeadline.COMPLETE,workSummary(l).state)
-        assertEquals("다음 배정 대기",workSummary(l).detail)
+        assertEquals("",workSummary(l).detail)
+        assertEquals("현재 작업 완료",mapStatus(BoardState(ledger=l)))
         assertEquals("p-zone-1",l.currentVisitId); assertFalse(l.dayClosed)
     }
     @Test fun receiptWarningOnlyBecomesPrimaryAfterConfirmedUnloading() {
@@ -153,5 +154,51 @@ class OperationsPresentationTest {
         assertEquals(WorkMapLayout(false, true), workMapLayout(840f, GuidanceMode.DEMO))
         assertEquals(WorkMapLayout(false, true), workMapLayout(420f, GuidanceMode.DEMO))
         assertEquals(WorkMapLayout(false, false), workMapLayout(1680f, GuidanceMode.NATIVE_SAMPLE))
+    }
+
+    @Test fun parkingReminderAppearsOnlyAfterCurrentDestinationArrivalForBothServices() {
+        val car = VehicleState(automotive = true, uxRestricted = false, gear = 4, speedKph = 0f, parkingBrake = false)
+        assertNull(BoardState().parkingBrakeNotice(car))
+        for (name in listOf("parcel", "freight")) {
+            val l = fixture(name)
+            val s = BoardState(ledger = l, navigationMode = GuidanceMode.DEMO)
+            val route = BoardNavigation.start(l.current!!, GuidanceMode.DEMO, now)
+            assertNull(s.parkingBrakeNotice(car))
+            for (status in listOf(GuidanceStatus.REQUESTED, GuidanceStatus.ACTIVE, GuidanceStatus.FAILED)) {
+                assertNull(s.copy(route = route.copy(status = status)).parkingBrakeNotice(car))
+            }
+            val arrived = s.copy(route = route.copy(status = GuidanceStatus.ARRIVED))
+            assertEquals("주차 브레이크를 체결해 주세요", arrived.parkingBrakeNotice(car))
+            assertNull(arrived.parkingBrakeNotice(car.copy(parkingBrake = true)))
+            assertEquals("주차 브레이크 확인 불가 · 직접 확인하세요", arrived.parkingBrakeNotice(car.copy(parkingBrake = null)))
+            assertNull(arrived.parkingBrakeNotice(car.copy(speedKph = 10f)))
+        }
+    }
+
+    @Test fun oldArrivalDoesNotCarryParkingReminderIntoNextAssignment() {
+        val car = VehicleState(automotive = true, uxRestricted = false, gear = 4, speedKph = 0f, parkingBrake = false)
+        val l = fixture()
+        val arrived = BoardNavigation.start(l.current!!, GuidanceMode.DEMO, now).copy(status = GuidanceStatus.ARRIVED)
+        val s = BoardState(ledger = l.copy(currentVisitId = "p-zone-2"), route = arrived)
+        assertFalse(s.hasArrivedAtCurrentVisit)
+        assertNull(s.parkingBrakeNotice(car))
+        assertNull(s.copy(ledger = l.copy(currentVisitId = null)).parkingBrakeNotice(car))
+    }
+
+    @Test fun routeCardsRetainEarlierUnresolvedStopsAndSameAddressInAnotherRound() {
+        val l = fixture().copy(currentVisitId = "p-collect")
+        val before = OperationsCodec.encode(l)
+        assertEquals(l.visits.map { it.id }, remainingRouteVisits(l).map { it.id })
+        assertEquals(2, remainingRouteVisits(l).count { it.name == "한빛아파트" })
+        assertEquals(before, OperationsCodec.encode(l))
+    }
+
+    @Test fun routeCardsWaitForReturnAndCompanyConfirmationBeforeRemovingAStop() {
+        val l = fixture()
+        assertTrue(remainingRouteVisits(finish(l, TaskKind.DELIVERY)).any { it.id == l.currentVisitId })
+        val pending = finish(l, sync = SyncMark.PENDING)
+        assertTrue(remainingRouteVisits(pending).any { it.id == l.currentVisitId })
+        assertFalse(remainingRouteVisits(finish(l)).any { it.id == l.currentVisitId })
+        assertEquals(l.visits.map { it.id }, remainingRouteVisits(l.copy(dayClosed = true)).map { it.id })
     }
 }

@@ -16,6 +16,20 @@ fun applyWorkPreferences(s: BoardState, mode: ServiceMode, cold: Boolean): Board
 val BoardState.canPresentNative: Boolean get() = navigationMode == GuidanceMode.NATIVE_SAMPLE &&
     ledger?.let { !it.dayClosed && !it.drivingEnded && it.current != null && route?.visitId == it.currentVisitId } == true
 
+val BoardState.hasArrivedAtCurrentVisit: Boolean get() = ledger?.current?.id?.let { id ->
+    route?.visitId == id && route.status == GuidanceStatus.ARRIVED
+} == true
+
+/** A stopped emulator or a previous visit's arrival must not prompt braking during the next route. */
+fun BoardState.parkingBrakeNotice(car: VehicleState): String? {
+    if (!hasArrivedAtCurrentVisit || !car.canWork) return null
+    return when (car.parkingBrake) {
+        false -> "주차 브레이크를 체결해 주세요"
+        null -> "주차 브레이크 확인 불가 · 직접 확인하세요"
+        true -> null
+    }
+}
+
 val LedgerTask.needsAttention: Boolean get() = remaining > 0 || awaitingSync
 val List<LedgerTask>.confirmedComplete: Boolean get() = isNotEmpty() && all { it.remaining == 0 && it.sync == SyncMark.CONFIRMED }
 val WorkLedger.attentionKind: TaskKind? get() = currentTasks.firstOrNull { it.kind == primaryKind && it.needsAttention }?.kind
@@ -65,7 +79,7 @@ fun workSummary(l: WorkLedger): WorkSummary {
         tasks.any { it.kind == TaskKind.UNLOAD } && tasks.filter { it.kind == TaskKind.UNLOAD }.confirmedComplete &&
             tasks.any { it.kind == TaskKind.RECEIPT && it.remaining > 0 } -> WorkSummary(WorkHeadline.RECEIPT, "하역 완료 · 인수 미완료", "단말에서 인수 결과를 받으면 반영합니다")
         tasks.confirmedComplete -> WorkSummary(WorkHeadline.COMPLETE,
-            if (tasks.any { it.kind == TaskKind.RECEIPT }) "하역 완료 · 인수 확인" else "현재 작업 처리 완료", "다음 배정 대기")
+            if (tasks.any { it.kind == TaskKind.RECEIPT }) "하역 완료 · 인수 확인" else "현재 작업 처리 완료", "")
         else -> WorkSummary(WorkHeadline.ACTIVE, "", "")
     }
 }
@@ -90,7 +104,7 @@ fun mapStatus(s: BoardState): String {
     val l = s.ledger ?: return "안내 준비"
     val summary = workSummary(l)
     if (summary.state in setOf(WorkHeadline.DAY_CLOSED, WorkHeadline.DRIVING_ENDED)) return summary.title
-    if (summary.state == WorkHeadline.COMPLETE) return "현재 작업 완료 · 다음 배정 대기"
+    if (summary.state == WorkHeadline.COMPLETE) return "현재 작업 완료"
     if (s.route?.status == GuidanceStatus.ARRIVED) return when {
         !s.connected && !l.streamId.startsWith("local-") -> "도착 · 마지막 업무 기록 표시"
         summary.state == WorkHeadline.PENDING -> "도착 · 처리 결과 전송 대기"

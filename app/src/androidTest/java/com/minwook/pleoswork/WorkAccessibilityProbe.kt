@@ -3,6 +3,7 @@ package com.minwook.pleoswork
 import android.app.Activity
 import android.app.Instrumentation
 import android.app.UiAutomation
+import androidx.activity.compose.setContent
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.InputDevice
@@ -62,7 +63,7 @@ class WorkAccessibilityProbe : Instrumentation() {
             send(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_ALT_LEFT,0)
         }
         try {
-            startActivitySync(targetContext.packageManager.getLaunchIntentForPackage(targetContext.packageName))
+            val activity = startActivitySync(targetContext.packageManager.getLaunchIntentForPackage(targetContext.packageName))
             SystemClock.sleep(1200)
             fun clickLabel(node: AccessibilityNodeInfo, label: String): Boolean {
                 if (node.text?.toString() == label || node.contentDescription?.toString() == label) {
@@ -84,6 +85,55 @@ class WorkAccessibilityProbe : Instrumentation() {
             val mode = args.getString("mode", "observe")
             val steps = args.getString("steps", "10").toInt().coerceIn(1, 80)
             when (mode) {
+                "settings-focus" -> {
+                    key(KeyEvent.KEYCODE_TAB); SystemClock.sleep(300)
+                    automation.rootInActiveWindow?.let {
+                        check(clickLabel(it,"설정 열기")); it.recycle()
+                    }
+                    SystemClock.sleep(600); focus()
+                    automation.rootInActiveWindow?.let {
+                        check(nodeLabel(it).contains("이전 화면으로 돌아가기"))
+                        check(clickLabel(it,"업무 유형 · 차량 옵션")); it.recycle()
+                    }
+                    SystemClock.sleep(600); focus()
+                    key(KeyEvent.KEYCODE_BACK); SystemClock.sleep(600); focus()
+                    repeat(3) { key(KeyEvent.KEYCODE_TAB); SystemClock.sleep(280); focus() }
+                    repeat(3) { key(KeyEvent.KEYCODE_TAB,true); SystemClock.sleep(280); focus() }
+                    key(KeyEvent.KEYCODE_BACK); SystemClock.sleep(600); focus()
+                    automation.rootInActiveWindow?.let {
+                        check(nodeLabel(it).contains("설정 열기") && !nodeLabel(it).contains("업무 연결"))
+                        it.recycle()
+                    }
+                    events.add("SETTINGS_FOCUS: opened settings and mode; Back restored settings then previous pane")
+                }
+                "energy" -> {
+                    check(targetContext.packageName.endsWith(".qa")) { "Synthetic telemetry is limited to the QA app" }
+                    val screen = activity as androidx.activity.ComponentActivity
+                    val session = androidx.lifecycle.ViewModelProvider(screen)[WorkSessionViewModel::class.java]
+                    val car = session.gateway.state.value.copy(automotive = true, uxRestricted = false,
+                        gear = 4, speedKph = 0f, fuelPercent = 12, fuelUpdatedAt = System.currentTimeMillis(),
+                        batteryPercent = null, rangeKm = null)
+                    val work = session.board.state.value
+                    runOnMainSync {
+                        screen.setContent { CarbonTheme { OperationsApp(work, car, session) } }
+                    }
+                    SystemClock.sleep(1600)
+                    val root = automation.rootInActiveWindow
+                    check(root != null && nodeLabel(root).contains("연료 12%")) { "Fresh low-energy toast missing" }
+                    val picture = automation.takeScreenshot()
+                    targetContext.openFileOutput("energy-toast.png", 0).use { output ->
+                        check(picture?.compress(android.graphics.Bitmap.CompressFormat.PNG,100,output) == true)
+                    }
+                    picture?.recycle()
+                    check(clickLabel(root,"차량 알림 닫기")) { "Dismiss action missing" }
+                    root.recycle(); SystemClock.sleep(1200)
+                    automation.rootInActiveWindow?.let {
+                        check(!nodeLabel(it).contains("주유가 필요합니다")) { "Dismissed warning immediately repeated" }
+                        it.recycle()
+                    }
+                    events.add("ENERGY_TOAST: fresh value shown; dismiss works; no immediate repeat")
+                    focus()
+                }
                 "sequence" -> args.getString("sequence", "TAB").split(',').take(100).forEach { command ->
                     when(command.trim()) {
                         "TAB" -> key(KeyEvent.KEYCODE_TAB)

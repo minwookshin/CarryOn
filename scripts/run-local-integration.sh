@@ -11,7 +11,8 @@ else
   echo 'Set ANDROID_SDK_ROOT or ANDROID_HOME, or add adb to PATH.' >&2
   exit 1
 fi
-"$work_adb" reverse tcp:8797 tcp:8797
+work_port=${CARRYON_TEST_PORT:-8798}
+"$work_adb" reverse "tcp:$work_port" "tcp:$work_port"
 cd "$project_dir"
 umask 077
-exec python3 integration/server.py --port 8797
+exec python3 integration/server.py --port "$work_port" --db "${CARRYON_TEST_DATABASE:-$project_dir/integration/local-state-demo.sqlite3}"

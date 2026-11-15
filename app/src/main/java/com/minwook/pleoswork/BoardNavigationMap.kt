@@ -40,13 +40,10 @@ import androidx.compose.ui.unit.dp
                 Surface(Modifier.align(Alignment.TopEnd).padding(24.dp), border = BorderStroke(1.dp, colors.outlineVariant)) {
                     TextButton(onClick = { follow = !follow; zoom = 1f },
                         enabled = current != null,
-                        modifier = Modifier.width(WorkDimens.control).heightIn(min = 100.dp).carFocusOutline("view")
+                        modifier = Modifier.size(WorkDimens.control).carFocusOutline("view")
                             .semantics { contentDescription = if (follow) "전체 경로 보기" else "현재 위치 따라가기" },
                         shape = RectangleShape, colors = ButtonDefaults.textButtonColors(contentColor = colors.onSurface)) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clearAndSetSemantics {}) {
-                            Text(if (follow) "2D" else "전체", style = MaterialTheme.typography.labelLarge)
-                            CarbonIcon(if (follow) R.drawable.ic_navigation else R.drawable.ic_expand, null)
-                        }
+                        Text(if (follow) "2D" else "전체", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.labelLarge)
                     }
                 }
                 Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 64.dp),

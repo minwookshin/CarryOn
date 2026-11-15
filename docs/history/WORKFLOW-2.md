@@ -58,4 +58,4 @@
 3. Pleos 기본 내비의 공개 에뮬레이터 지도/GPS 제약은 그대로다. 목적지 요청·경로/도착 수신 코드는 유지하며 가상 도착으로 실제 SDK 도착을 위장하지 않는다.
 4. 앱 프로세스/시동 종료 후 계속 수신하는 서비스, 다구획 냉동, 원격 제어, 장기 감사 기록은 구현 범위에 포함하지 않았다.
 
-[직접 시험](integration/README.md) · [API·인증·센서 결정과 공식 근거](integration/CONTRACT.md) · [TalkBack 공식 키보드 안내](https://support.google.com/accessibility/android/answer/6110948?hl=en)
+[직접 시험](../../integration/README.md) · [API·인증·센서 결정과 공식 근거](../../integration/CONTRACT.md) · [TalkBack 공식 키보드 안내](https://support.google.com/accessibility/android/answer/6110948?hl=en)

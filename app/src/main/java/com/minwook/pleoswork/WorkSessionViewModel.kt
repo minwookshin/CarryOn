@@ -17,7 +17,7 @@ class WorkSessionViewModel(application: Application) : AndroidViewModel(applicat
     val board = OperationsRepository(application)
     val gateway = PleosGateway(application)
     private val credentials = WorkCredentialStore(application)
-    val apiBase = BuildConfig.WORK_API_URL.ifBlank { if (BuildConfig.DEBUG) "http://127.0.0.1:8797" else "" }
+    val apiBase = BuildConfig.WORK_API_URL.ifBlank { if (BuildConfig.ALLOW_LOCAL_TEST_SERVER) "http://127.0.0.1:8797" else "" }
     private val api = WorkServiceClient(apiBase)
     private var tokens: WorkTokens? = credentials.load()?.takeIf { it.issuer == apiBase }
     private var connectionJob: Job? = null

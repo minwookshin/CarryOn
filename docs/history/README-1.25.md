@@ -2,7 +2,7 @@
 
 택배·화물 운전자가 차량에서 목적지와 물량을 확인하고, 단말 처리 결과를 받은 뒤 다음 방문지로 이어가는 Kotlin / Jetpack Compose 앱입니다. 왼쪽 지도와 오른쪽 Carbon 작업 화면을 함께 사용합니다.
 
-![배송·회수 방문지 도착 화면](docs/images/workflow.jpg)
+![배송·회수 방문지 도착 화면](../images/workflow.jpg)
 
 ## 먼저 보기
 
@@ -12,9 +12,9 @@
 
 ## 직접 실행
 
-1. [설치 안내](docs/INSTALL.md)에 따라 Pleos Connect 에뮬레이터를 준비합니다.
+1. [설치 안내](../INSTALL.md)에 따라 Pleos Connect 에뮬레이터를 준비합니다.
 2. 릴리스의 `Pleos-Work-1.25.apk`를 설치하고 `배송` 앱을 엽니다.
-3. [테스트 순서](docs/TEST.md)를 따라 배송·회수와 화물을 확인합니다.
+3. [테스트 순서](../TEST.md)를 따라 배송·회수와 화물을 확인합니다.
 
 브라우저에서 APK를 바로 실행하는 구조가 아닙니다. 현재 확인한 환경은 **Mac Apple Silicon · Pleos Connect 2.1.0 ARM64 · Android Automotive API 34**입니다.
 
@@ -40,6 +40,6 @@ Kotlin 2.1.20 · AGP 8.9.2 · Gradle 8.11.1 · compileSdk 35 · targetSdk 34. Pl
 
 ## 확인한 내용
 
-1.25에서 단위 검사 131개가 통과했습니다. 2026-11-02에는 김민준 배차의 세 방문지와 배송·회수·재탑승·센터 인계 전체를 직접 확인했습니다. [검증 범위와 영상 설명](docs/TEST.md)을 참고하세요.
+1.25에서 단위 검사 131개가 통과했습니다. 2026-11-02에는 김민준 배차의 세 방문지와 배송·회수·재탑승·센터 인계 전체를 직접 확인했습니다. [검증 범위와 영상 설명](../TEST.md)을 참고하세요.
 
-Carbon 색상과 IBM Plex Sans KR을 Compose에 적용한 프로젝트입니다. 공식 Carbon Android 라이브러리 또는 접근성 인증 제품은 아닙니다. 구성 요소별 출처와 라이선스는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있습니다.
+Carbon 색상과 IBM Plex Sans KR을 Compose에 적용한 프로젝트입니다. 공식 Carbon Android 라이브러리 또는 접근성 인증 제품은 아닙니다. 구성 요소별 출처와 라이선스는 [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md)에 있습니다.

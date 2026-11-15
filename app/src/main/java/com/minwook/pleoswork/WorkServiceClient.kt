@@ -56,17 +56,17 @@ class WorkCredentialStore(context: Context) {
     @Synchronized fun clear() { prefs.edit().clear().commit() }
 }
 
-/** Carrier adapter, not a Pleos authentication API. HTTP is restricted to the debug loopback fixture. */
+/** Carrier adapter. Local HTTP is enabled only in debug and the isolated contest demo. */
 class WorkServiceClient(val baseUrl: String) {
     companion object {
-        fun allowedBase(url: String, debug: Boolean): Boolean = runCatching {
+        fun allowedBase(url: String, allowLocalTestServer: Boolean): Boolean = runCatching {
             val u = URI(url)
             u.host != null && u.userInfo == null && u.rawQuery == null && u.rawFragment == null &&
-                (u.scheme == "https" || debug && u.scheme == "http" && u.host in setOf("127.0.0.1", "localhost"))
+                (u.scheme == "https" || allowLocalTestServer && u.scheme == "http" && u.host in setOf("127.0.0.1", "localhost"))
         }.getOrDefault(false)
     }
     private suspend fun request(path: String, form: Map<String, String>? = null, token: String? = null): JsonObject = withContext(Dispatchers.IO) {
-        if (!allowedBase(baseUrl, BuildConfig.DEBUG)) throw WorkApiFailure("endpoint_not_configured")
+        if (!allowedBase(baseUrl, BuildConfig.ALLOW_LOCAL_TEST_SERVER)) throw WorkApiFailure("endpoint_not_configured")
         val c = URI(baseUrl.trimEnd('/') + path).toURL().openConnection() as HttpURLConnection
         try {
             c.connectTimeout = 5_000; c.readTimeout = 5_000; c.instanceFollowRedirects = false
@@ -98,7 +98,7 @@ class WorkServiceClient(val baseUrl: String) {
         val grant = OperationsCodec.gson.fromJson(request("/oauth/device_authorization", mapOf("client_id" to "pleos-work-car",
             "scope" to "work:read cargo:read")), DeviceGrant::class.java)
         require(grant.deviceCode.isNotBlank() && grant.userCode.isNotBlank() && grant.expiresIn in 30..1800 && grant.interval in 1..60)
-        require(allowedBase(grant.verificationUri, BuildConfig.DEBUG))
+        require(allowedBase(grant.verificationUri, BuildConfig.ALLOW_LOCAL_TEST_SERVER))
         grant.verificationUriComplete?.let { require(URI(it).host == URI(grant.verificationUri).host && URI(it).scheme == URI(grant.verificationUri).scheme && URI(it).port == URI(grant.verificationUri).port && URI(it).userInfo == null) }
         return grant
     }

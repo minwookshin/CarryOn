@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
         session = ViewModelProvider(this)[WorkSessionViewModel::class.java]
         val repository = session.board
         val gateway = session.gateway
-        val needed = listOf("android.car.permission.CAR_SPEED", "android.car.permission.CAR_POWERTRAIN", "pleos.car.permission.CAR_DOORS", "pleos.car.permission.NAVI_ROUTE", "pleos.car.permission.NAVI_ROUTE_SEARCH", "pleos.car.permission.NAVI_CUSTOM_MAP")
+        val needed = listOf("android.car.permission.CAR_SPEED", "android.car.permission.CAR_POWERTRAIN", "android.car.permission.CAR_ENERGY", "pleos.car.permission.CAR_ENERGY", "pleos.car.permission.CAR_DOORS", "pleos.car.permission.NAVI_ROUTE", "pleos.car.permission.NAVI_ROUTE_SEARCH", "pleos.car.permission.NAVI_CUSTOM_MAP")
             .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
         if (needed.isNotEmpty()) permissions.launch(needed.toTypedArray())
         setContent {

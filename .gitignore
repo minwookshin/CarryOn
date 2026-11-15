@@ -10,9 +10,14 @@ local.properties
 .env
 .env.*
 *.apk
+!/apk/*.apk
 *.mp4
+!/demo/*.mp4
 *.zip
 captures/
 
 __pycache__/
 *.sqlite3*
+*.idsig
+*.password
+signing.properties

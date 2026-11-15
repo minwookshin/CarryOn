@@ -47,6 +47,7 @@ class PleosGateway(private val context: Context) {
             if (!active) return
             refreshNavigation()
             refreshDoor()
+            refreshEnergy()
             main.postDelayed(this, 20_000)
         }
     }
@@ -139,7 +140,8 @@ class PleosGateway(private val context: Context) {
             car = Car.createCar(context, main, Car.CAR_WAIT_TIMEOUT_DO_NOT_WAIT) { connectedCar, ready ->
                 if (!active || session != generation) return@createCar
                 if (!ready) {
-                    mutable.update { it.copy(uxRestricted = null, gear = null, speedKph = null, parkingBrake = null, doorPosition = null, vehicleStatus = "차량 연결 끊김") }
+                    mutable.update { it.copy(uxRestricted = null, gear = null, speedKph = null, parkingBrake = null, doorPosition = null,
+                        fuelPercent = null, batteryPercent = null, rangeKm = null, vehicleStatus = "차량 연결 끊김") }
                     return@createCar
                 }
                 runCatching {
@@ -157,6 +159,7 @@ class PleosGateway(private val context: Context) {
                             check(properties!!.registerCallback(propertyListener, id, if (id == VehiclePropertyIds.PERF_VEHICLE_SPEED) CarPropertyManager.SENSOR_RATE_NORMAL else CarPropertyManager.SENSOR_RATE_ONCHANGE)) { "Subscription unavailable: $id" }
                         }.onFailure { error("차량 상태", it) }
                     }
+                    refreshEnergy()
                 }.onFailure { error("AAOS", it) }
             }
         }.onFailure { error("Car 연결", it) }
@@ -164,6 +167,7 @@ class PleosGateway(private val context: Context) {
         runCatching {
             vehicle = Vehicle(context).also { it.initialize() }
             refreshDoor()
+            refreshEnergy()
         }.onFailure {
             mutable.update { s -> s.copy(vehicleStatus = "연결 실패") }
             error("Vehicle SDK", it)
@@ -219,10 +223,10 @@ class PleosGateway(private val context: Context) {
     fun refreshEnergy() {
         if (!active) return
         val session=generation
-        val v=vehicle ?: return
+        val v=vehicle
         fun current()=active && generation==session
         fun validPercent(value: Int?)=value?.takeIf { it in 0..100 }
-        if(context.checkSelfPermission("pleos.car.permission.CAR_ENERGY") == PackageManager.PERMISSION_GRANTED) runCatching {
+        if(v != null && context.checkSelfPermission("pleos.car.permission.CAR_ENERGY") == PackageManager.PERMISSION_GRANTED) runCatching {
             v.getFuel().checkFuelPercentCapabilities(onComplete={ config ->
                 if(current()) {
                     if(config.accessType in setOf(AccessType.READ,AccessType.READ_WRITE)) v.getFuel().getFuelPercent(onComplete={ value ->
@@ -240,6 +244,10 @@ class PleosGateway(private val context: Context) {
                 }
             },onFailed={ e -> if(current()) { mutable.update { it.copy(batteryPercent=null) }; error("배터리 지원 확인",e) } })
         }.onFailure { error("에너지 조회",it) }
+        if(context.checkSelfPermission(Car.PERMISSION_ENERGY) != PackageManager.PERMISSION_GRANTED) {
+            mutable.update { it.copy(rangeKm = null, rangeUpdatedAt = 0) }
+            return
+        }
         runCatching {
             val manager=properties ?: return@runCatching
             val id=VehiclePropertyIds.RANGE_REMAINING

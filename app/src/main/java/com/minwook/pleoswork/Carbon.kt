@@ -33,7 +33,8 @@ val Plex = FontFamily(Font(R.font.plex_regular, FontWeight.Normal), Font(R.font.
 
 /** Shared app sizing; Pleos system chrome keeps its native dimensions. */
 object WorkDimens {
-    val icon = 32.dp
+    // Pleos iconography uses a 48 x 48dp base grid.
+    val icon = 48.dp
     val control = 76.dp
     val listRow = 96.dp
     val inset = 24.dp
@@ -113,7 +114,7 @@ object WorkDimens {
             Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
                 CarbonIcon(icon, label)
                 if(isSelected == true) Box(Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp)
-                    .size(width=24.dp,height=3.dp).background(MaterialTheme.colorScheme.primary))
+                    .size(width=WorkDimens.icon,height=3.dp).background(MaterialTheme.colorScheme.primary))
             }
         }
     }
